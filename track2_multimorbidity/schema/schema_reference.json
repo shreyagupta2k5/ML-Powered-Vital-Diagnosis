@@ -1,0 +1,240 @@
+{
+  "schema_version": "1.0.0",
+  "created_at": "2026-05-17T10:02:17.217846Z",
+  "description": "Ingestion schema for Track 2 multimorbidity crisis prediction",
+  "feature_schema": {
+    "glucose_mean": {
+      "dtype": "float32",
+      "unit": "mg/dL",
+      "valid_range": [
+        40,
+        500
+      ],
+      "missing_strategy": "median_impute",
+      "source": "labevents itemid 50931 or chartevents itemid 225664"
+    },
+    "glucose_min": {
+      "dtype": "float32",
+      "unit": "mg/dL",
+      "valid_range": [
+        40,
+        500
+      ],
+      "missing_strategy": "median_impute",
+      "source": "labevents itemid 50931 or chartevents itemid 225664"
+    },
+    "glucose_max": {
+      "dtype": "float32",
+      "unit": "mg/dL",
+      "valid_range": [
+        40,
+        500
+      ],
+      "missing_strategy": "median_impute",
+      "source": "labevents itemid 50931 or chartevents itemid 225664"
+    },
+    "glucose_std": {
+      "dtype": "float32",
+      "unit": "mg/dL",
+      "valid_range": [
+        0,
+        200
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "derived from glucose time-series"
+    },
+    "glucose_cv": {
+      "dtype": "float32",
+      "unit": "ratio",
+      "valid_range": [
+        0,
+        5
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "glucose_std / glucose_mean"
+    },
+    "glucose_count": {
+      "dtype": "int16",
+      "unit": "count",
+      "valid_range": [
+        1,
+        1000
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "number of glucose measurements in stay"
+    },
+    "sbp_mean": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        60,
+        250
+      ],
+      "missing_strategy": "median_impute",
+      "source": "chartevents itemids 220179, 220050, 225309"
+    },
+    "sbp_min": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        60,
+        250
+      ],
+      "missing_strategy": "median_impute",
+      "source": "chartevents itemids 220179, 220050, 225309"
+    },
+    "sbp_max": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        60,
+        250
+      ],
+      "missing_strategy": "median_impute",
+      "source": "chartevents itemids 220179, 220050, 225309"
+    },
+    "sbp_std": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        0,
+        100
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "derived from SBP time-series"
+    },
+    "sbp_cv": {
+      "dtype": "float32",
+      "unit": "ratio",
+      "valid_range": [
+        0,
+        5
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "sbp_std / sbp_mean"
+    },
+    "sbp_count": {
+      "dtype": "int16",
+      "unit": "count",
+      "valid_range": [
+        1,
+        5000
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "number of SBP measurements in stay"
+    },
+    "map_mean": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        50,
+        200
+      ],
+      "missing_strategy": "median_impute",
+      "source": "chartevents itemids 220181, 220052, 225312"
+    },
+    "map_min": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        50,
+        200
+      ],
+      "missing_strategy": "median_impute",
+      "source": "chartevents itemids 220181, 220052, 225312"
+    },
+    "map_max": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        50,
+        200
+      ],
+      "missing_strategy": "median_impute",
+      "source": "chartevents itemids 220181, 220052, 225312"
+    },
+    "map_std": {
+      "dtype": "float32",
+      "unit": "mmHg",
+      "valid_range": [
+        0,
+        80
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "derived from MAP time-series"
+    },
+    "map_cv": {
+      "dtype": "float32",
+      "unit": "ratio",
+      "valid_range": [
+        0,
+        5
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "map_std / map_mean"
+    },
+    "map_count": {
+      "dtype": "int16",
+      "unit": "count",
+      "valid_range": [
+        1,
+        5000
+      ],
+      "missing_strategy": "zero_fill",
+      "source": "number of MAP measurements in stay"
+    },
+    "los": {
+      "dtype": "float32",
+      "unit": "days",
+      "valid_range": [
+        0,
+        60
+      ],
+      "missing_strategy": "median_impute",
+      "source": "icustays.los"
+    }
+  },
+  "identifier_fields": {
+    "subject_id": {
+      "dtype": "int64",
+      "purpose": "patient identifier"
+    },
+    "hadm_id": {
+      "dtype": "int64",
+      "purpose": "hospital admission identifier"
+    },
+    "stay_id": {
+      "dtype": "int64",
+      "purpose": "ICU stay identifier"
+    }
+  },
+  "target_fields": {
+    "crisis_label": {
+      "dtype": "int8",
+      "values": [
+        0,
+        1
+      ],
+      "purpose": "binary crisis indicator"
+    },
+    "severity": {
+      "dtype": "string",
+      "values": [
+        "LOW",
+        "MODERATE",
+        "HIGH"
+      ],
+      "purpose": "crisis severity tier"
+    },
+    "crisis_type": {
+      "dtype": "string",
+      "purpose": "descriptive crisis category"
+    }
+  },
+  "preprocessing_requirements": {
+    "timestamp_format": "ISO 8601 (YYYY-MM-DDTHH:MM:SS)",
+    "value_clipping": "Apply physiological bounds before aggregation",
+    "aggregation_window": "ICU stay duration (intime to outtime)",
+    "missing_value_handling": "As specified per feature in feature_schema"
+  }
+}
