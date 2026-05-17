@@ -1,0 +1,109 @@
+{
+  "stats_version": "1.0.0",
+  "created_at": "2026-05-17T10:11:01.265556Z",
+  "dataset_info": {
+    "source": "MIMIC-IV Demo v2.2 - Track 2 processed",
+    "total_samples": 140,
+    "feature_count": 7
+  },
+  "feature_statistics": {
+    "glucose_mean": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 143.38084082856065,
+      "std": 43.735741759172456,
+      "min": 77.46000000000001,
+      "max": 298.0,
+      "q25": 113.1875,
+      "q50": 132.375,
+      "q75": 162.46428571428572
+    },
+    "glucose_min": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 107.2805,
+      "std": 35.3336663077864,
+      "min": 49.3,
+      "max": 257.0,
+      "q25": 82.75,
+      "q50": 100.0,
+      "q75": 121.75
+    },
+    "glucose_max": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 194.02857142857144,
+      "std": 91.04080269363862,
+      "min": 78.0,
+      "max": 468.0,
+      "q25": 135.25,
+      "q50": 163.0,
+      "q75": 220.25
+    },
+    "glucose_std": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 35.544730882066844,
+      "std": 28.434803622372264,
+      "min": 0.0,
+      "max": 147.05554506149485,
+      "q25": 18.051681734807545,
+      "q50": 26.76253600340097,
+      "q75": 42.95673695708276
+    },
+    "glucose_cv": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 0.23420314017922622,
+      "std": 0.14244236025201734,
+      "min": 0.0,
+      "max": 0.8114890858069738,
+      "q25": 0.15556971651904433,
+      "q50": 0.2100078211115742,
+      "q75": 0.2636836346749549
+    },
+    "glucose_count": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 8.292857142857143,
+      "std": 9.663995349877245,
+      "min": 1.0,
+      "max": 59.0,
+      "q25": 2.0,
+      "q50": 6.0,
+      "q75": 11.0
+    },
+    "los": {
+      "count": 140,
+      "missing_count": 0,
+      "missing_rate": 0.0,
+      "mean": 3.6793790509259257,
+      "std": 3.8824136804417315,
+      "min": 0.0237268518518518,
+      "max": 20.52868055555556,
+      "q25": 1.1706626157407407,
+      "q50": 2.1550925925925926,
+      "q75": 4.907748842592593
+    }
+  },
+  "drift_thresholds": {
+    "psi": {
+      "warning": 0.1,
+      "critical": 0.25
+    },
+    "ks_test": {
+      "alpha": 0.05,
+      "action": "retrain_if_p_below_alpha"
+    },
+    "evaluation_window": {
+      "min_samples": 50,
+      "time_window_hours": 168
+    }
+  }
+}
