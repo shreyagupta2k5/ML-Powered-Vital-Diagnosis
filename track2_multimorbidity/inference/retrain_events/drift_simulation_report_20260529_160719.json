@@ -1,0 +1,62 @@
+{
+  "drift_feature": "glucose_mean",
+  "drift_magnitude": 2.0,
+  "psi_threshold": 0.25,
+  "ks_alpha": 0.05,
+  "samples_injected": 100,
+  "drift_detected": true,
+  "psi_score": 4.8713,
+  "ks_pvalue": 0.0,
+  "retrain_triggered": true,
+  "full_report": {
+    "glucose_mean": {
+      "psi": 4.8713,
+      "ks_stat": 0.564,
+      "p_value": 0.0,
+      "drift_detected": true,
+      "sample_size": 100
+    },
+    "glucose_min": {
+      "psi": 0.0982,
+      "ks_stat": 0.067,
+      "p_value": 0.788705,
+      "drift_detected": false,
+      "sample_size": 100
+    },
+    "glucose_max": {
+      "psi": 0.6614,
+      "ks_stat": 0.103,
+      "p_value": 0.274236,
+      "drift_detected": true,
+      "sample_size": 100
+    },
+    "glucose_std": {
+      "psi": 1.7076,
+      "ks_stat": 0.115,
+      "p_value": 0.16945,
+      "drift_detected": true,
+      "sample_size": 100
+    },
+    "glucose_cv": {
+      "psi": 0.7629,
+      "ks_stat": 0.058,
+      "p_value": 0.905706,
+      "drift_detected": true,
+      "sample_size": 100
+    },
+    "glucose_count": {
+      "psi": 1.8104,
+      "ks_stat": 0.188,
+      "p_value": 0.002832,
+      "drift_detected": true,
+      "sample_size": 100
+    },
+    "los": {
+      "psi": 1.2573,
+      "ks_stat": 0.153,
+      "p_value": 0.025823,
+      "drift_detected": true,
+      "sample_size": 100
+    }
+  }
+}
