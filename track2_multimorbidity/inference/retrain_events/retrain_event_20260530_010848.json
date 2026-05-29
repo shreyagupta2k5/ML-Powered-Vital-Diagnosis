@@ -1,0 +1,65 @@
+{
+  "trigger_timestamp": "2026-05-29T19:38:48.848018+00:00",
+  "drifted_features": [
+    "glucose_mean",
+    "glucose_min",
+    "glucose_max",
+    "glucose_std",
+    "glucose_cv",
+    "glucose_count",
+    "los"
+  ],
+  "drift_report": {
+    "glucose_mean": {
+      "psi": 4.9501,
+      "ks_stat": 0.5467,
+      "p_value": 0.0,
+      "drift_detected": true,
+      "sample_size": 64
+    },
+    "glucose_min": {
+      "psi": 0.2955,
+      "ks_stat": 0.0751,
+      "p_value": 0.859966,
+      "drift_detected": true,
+      "sample_size": 64
+    },
+    "glucose_max": {
+      "psi": 0.4745,
+      "ks_stat": 0.088,
+      "p_value": 0.70555,
+      "drift_detected": true,
+      "sample_size": 64
+    },
+    "glucose_std": {
+      "psi": 0.4101,
+      "ks_stat": 0.121,
+      "p_value": 0.315184,
+      "drift_detected": true,
+      "sample_size": 64
+    },
+    "glucose_cv": {
+      "psi": 0.3413,
+      "ks_stat": 0.0621,
+      "p_value": 0.962629,
+      "drift_detected": true,
+      "sample_size": 64
+    },
+    "glucose_count": {
+      "psi": 2.4139,
+      "ks_stat": 0.205,
+      "p_value": 0.010763,
+      "drift_detected": true,
+      "sample_size": 64
+    },
+    "los": {
+      "psi": 2.9888,
+      "ks_stat": 0.174,
+      "p_value": 0.045971,
+      "drift_detected": true,
+      "sample_size": 64
+    }
+  },
+  "new_model_version": "v1.1.0",
+  "status": "retraining_simulated"
+}
