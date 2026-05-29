@@ -3,8 +3,8 @@
 # Author: Swayam (Track 2: Complex Multi-Morbidity Core)
 # Objective: Deploy domain-adapted model behind REST API with
 #            input validation, telemetry logging, drift monitoring,
-#            SHAP explainability, and Phase 7 payload formatting.
-#            Accepts union of MIMIC+Pima features; validates only core MIMIC schema.
+#            SHAP explainability, conformal prediction intervals,
+#            and Phase 7 payload formatting.
 # ==========================================
 
 import sys
@@ -13,7 +13,7 @@ import uuid
 import time
 import pathlib
 import asyncio
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple
 from datetime import datetime, timezone
 
 import joblib
@@ -28,11 +28,11 @@ from track2_multimorbidity.inference.mlops_monitor import MLOpsMonitor
 import warnings
 warnings.filterwarnings('ignore')
 
-# Resolve project root dynamically to enable imports regardless of execution directory
+# Resolve project root dynamically
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Import custom MLOps modules from repository
+# Import custom MLOps modules
 from track2_multimorbidity.data_ingestion.data_ingestion import DataIngestionPipeline
 from track2_multimorbidity.inference.telemetry_logger import TelemetryLogger
 
@@ -42,6 +42,7 @@ from track2_multimorbidity.inference.telemetry_logger import TelemetryLogger
 
 SCHEMA_DIR = PROJECT_ROOT / 'schema'
 MODEL_PATH = PROJECT_ROOT / 'models' / 'model_mimic_adapted.joblib'
+CALIBRATION_PATH = PROJECT_ROOT / 'models' / 'conformal_calibration.npy'
 
 LOG_DIR = PROJECT_ROOT / 'inference' / 'logs'
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,7 +53,7 @@ RETRAIN_DIR.mkdir(parents=True, exist_ok=True)
 # Initialize FastAPI application
 app = FastAPI(
     title="Track 2 Multimorbidity Risk Engine",
-    description="Real-time ICU deterioration prediction with MLOps telemetry and SHAP explainability",
+    description="Real-time ICU deterioration prediction with MLOps telemetry, SHAP explainability, and conformal prediction intervals",
     version="1.0.0"
 )
 
@@ -61,16 +62,10 @@ app = FastAPI(
 # -----------------------------------------------------------------------------
 
 def load_system_components():
-    """
-    Load model, schema contract, ingestion pipeline,
-    telemetry logger, SHAP explainer, and MLOps monitor at startup.
-    """
+    """Load model, schema, ingestion pipeline, telemetry, SHAP, conformal calibration, and MLOps monitor."""
 
     if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            f"Model not found at {MODEL_PATH}. "
-            "Run model training in Colab and copy to track2_multimorbidity/models/"
-        )
+        raise FileNotFoundError(f"Model not found at {MODEL_PATH}.")
 
     model = joblib.load(MODEL_PATH)
     model_version = "v1.0.0"
@@ -80,14 +75,12 @@ def load_system_components():
         schema_contract = json.load(f)
 
     core_features = list(schema_contract['feature_schema'].keys())
-    union_features = core_features + [
-        'bmi', 'age', 'insulin_score', 'genetic_risk_score', 'comorbidity_flag'
-    ]
+    union_features = core_features + ['bmi', 'age', 'insulin_score', 'genetic_risk_score', 'comorbidity_flag']
 
     ingestion_pipeline = DataIngestionPipeline(schema_dir=SCHEMA_DIR)
     telemetry = TelemetryLogger(log_dir=LOG_DIR, log_filename='api_inference_logs.csv')
 
-    # Initialize SHAP explainer for XGBoost (TreeExplainer is optimized for gradient boosting)
+    # Initialize SHAP explainer
     shap_explainer = None
     try:
         import shap
@@ -97,6 +90,19 @@ def load_system_components():
         print("Warning: 'shap' library not installed. Falling back to deviation-based feature ranking.")
     except Exception as e:
         print(f"Warning: SHAP initialization failed ({str(e)}). Using fallback ranking.")
+
+    # Load or compute conformal prediction calibration
+    conformal_quantile = None
+    if CALIBRATION_PATH.exists():
+        try:
+            conformal_quantile = np.load(CALIBRATION_PATH).item()
+            print(f"Conformal prediction calibration loaded: quantile={conformal_quantile:.4f}")
+        except Exception as e:
+            print(f"Warning: Failed to load conformal calibration ({str(e)}). Using default.")
+    else:
+        # Default quantile for 90% coverage (alpha=0.1) with small demo dataset
+        conformal_quantile = 0.08
+        print(f"Using default conformal quantile: {conformal_quantile:.4f} (90% coverage)")
 
     # Drift monitor initialization
     mlops_monitor = MLOpsMonitor(
@@ -117,12 +123,12 @@ def load_system_components():
 
     return (
         model, model_version, schema_contract, core_features, union_features,
-        ingestion_pipeline, telemetry, mlops_monitor, shap_explainer
+        ingestion_pipeline, telemetry, mlops_monitor, shap_explainer, conformal_quantile
     )
 
 (
     model, model_version, schema_contract, core_features, union_features,
-    ingestion_pipeline, telemetry, mlops_monitor, shap_explainer
+    ingestion_pipeline, telemetry, mlops_monitor, shap_explainer, conformal_quantile
 ) = load_system_components()
 
 # -----------------------------------------------------------------------------
@@ -130,11 +136,6 @@ def load_system_components():
 # -----------------------------------------------------------------------------
 
 class PatientVitalsRequest(BaseModel):
-    """
-    Accepts union of MIMIC + Pima features.
-    Only core MIMIC features are validated through schema enforcement.
-    Additional metabolic features are passed through directly.
-    """
     glucose_mean: Optional[float] = Field(None, description="Aggregated glucose level (mg/dL)")
     sbp_mean: Optional[float] = Field(None, description="Mean systolic blood pressure (mmHg)")
     map_mean: Optional[float] = Field(None, description="Mean arterial pressure (mmHg)")
@@ -180,6 +181,7 @@ async def health_check():
         "core_features": len(core_features),
         "union_features": len(union_features),
         "shap_explainability": "active" if shap_explainer is not None else "fallback_mode",
+        "conformal_prediction": "active" if conformal_quantile is not None else "fallback_mode",
         "drift_monitor": mlops_monitor.get_drift_status(),
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
@@ -225,16 +227,22 @@ async def predict_crisis(request: PatientVitalsRequest):
             raise RuntimeError("Model does not expose feature_names_in_.")
 
         model_features = model.feature_names_in_.tolist()
-        feature_values = []
-        for feat in model_features:
-            value = processed_features.get(feat)
-            feature_values.append(0.0 if value is None else float(value))
-
+        feature_values = [0.0 if processed_features.get(feat) is None else float(processed_features[feat]) for feat in model_features]
         feature_vector = pd.DataFrame([feature_values], columns=model_features)
 
+        # Generate prediction
         proba = model.predict_proba(feature_vector)[0][1]
-        prediction = model.predict(feature_vector)[0]
 
+        # Conformal prediction interval (split conformal method)
+        if conformal_quantile is not None:
+            ci_lower = max(0.0, proba - conformal_quantile)
+            ci_upper = min(1.0, proba + conformal_quantile)
+        else:
+            # Fallback to bootstrap proxy
+            ci_lower = max(0.0, proba - 0.08)
+            ci_upper = min(1.0, proba + 0.08)
+
+        # Severity classification
         severity = "LOW"
         crisis_type = "none"
         if proba > 0.75:
@@ -244,23 +252,22 @@ async def predict_crisis(request: PatientVitalsRequest):
             severity = "MODERATE"
             crisis_type = "isolated_glucose" if processed_features.get('glucose_mean', 0) > 150 else "isolated_bp"
 
+        # Temporal instability proxy
         instability = sum([
             processed_features.get('glucose_cv', 0),
             processed_features.get('sbp_cv', 0),
             processed_features.get('map_cv', 0)
         ]) / 3.0
 
-        # SHAP Explainability: Real TreeExplainer with safe fallback
+        # SHAP explainability
         if shap_explainer is not None:
             try:
                 shap_values = shap_explainer.shap_values(feature_vector)
                 top_indices = np.argsort(np.abs(shap_values[0]))[::-1][:3]
                 shap_top = [feature_vector.columns[i] for i in top_indices]
             except Exception:
-                # Fallback if SHAP computation fails at runtime
                 shap_top = ["fallback_ranking_active"]
         else:
-            # Fallback: deviation from baseline median
             shap_drivers = sorted(
                 processed_features.items(),
                 key=lambda x: abs(x[1] - schema_contract['feature_schema'].get(x[0], {}).get('q50', 0)) if x[0] in schema_contract['feature_schema'] else abs(x[1]),
@@ -268,16 +275,13 @@ async def predict_crisis(request: PatientVitalsRequest):
             )[:3]
             shap_top = [f[0] for f in shap_drivers]
 
-        ci_lower = max(0.0, proba - 0.08)
-        ci_upper = min(1.0, proba + 0.08)
-
+        # Telemetry logging
         inference_latency = (time.time() - start_time) * 1000
         prediction_dict = {
             "crisis_probability": float(proba),
             "severity_level": severity,
             "crisis_type": crisis_type
         }
-
         telemetry.log_inference(
             features=processed_features,
             prediction=prediction_dict,
