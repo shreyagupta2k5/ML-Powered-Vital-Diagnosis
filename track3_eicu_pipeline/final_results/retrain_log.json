@@ -1,0 +1,66 @@
+[
+  {
+    "round": 1,
+    "timestamp": "2026-05-31T08:15",
+    "pre_retrain_auc": 0.753,
+    "post_retrain_auc": null,
+    "post_retrain_auc_honest": null,
+    "action": "skipped",
+    "n_significant": 0,
+    "new_batch_size": 259,
+    "max_psi": 0.0623,
+    "drifted_features": [
+      "noninvasivesystolic_std",
+      "noninvasivesystolic_count",
+      "noninvasivesystolic_mean"
+    ]
+  },
+  {
+    "round": 2,
+    "timestamp": "2026-05-31T08:15",
+    "pre_retrain_auc": 0.753,
+    "post_retrain_auc": 0.8333,
+    "post_retrain_auc_honest": 0.8333,
+    "action": "deployed",
+    "n_significant": 3,
+    "new_batch_size": 259,
+    "max_psi": 8.2875,
+    "drifted_features": [
+      "sao2_mean",
+      "respiration_mean",
+      "heartrate_mean"
+    ]
+  },
+  {
+    "round": 3,
+    "timestamp": "2026-05-31T08:15",
+    "pre_retrain_auc": 0.8333,
+    "post_retrain_auc": 0.8426,
+    "post_retrain_auc_honest": 0.8426,
+    "action": "deployed",
+    "n_significant": 3,
+    "new_batch_size": 259,
+    "max_psi": 7.2886,
+    "drifted_features": [
+      "sao2_mean",
+      "heartrate_mean",
+      "respiration_mean"
+    ]
+  },
+  {
+    "round": 4,
+    "timestamp": "2026-05-31T08:15",
+    "pre_retrain_auc": 0.8426,
+    "post_retrain_auc": null,
+    "post_retrain_auc_honest": null,
+    "action": "skipped",
+    "n_significant": 0,
+    "new_batch_size": 259,
+    "max_psi": 0.0964,
+    "drifted_features": [
+      "sao2_min",
+      "sao2_std",
+      "noninvasivediastolic_mean"
+    ]
+  }
+]

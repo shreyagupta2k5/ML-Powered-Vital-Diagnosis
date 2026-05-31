@@ -1,0 +1,562 @@
+Feature,SHAP Importance
+AST (SGOT)_mean,0.014195659538449252
+lactate_min,0.013925982724975907
+FiO2_max,0.01259471543875343
+paCO2_std,0.011826177893041356
+AST (SGOT)_max,0.01179244678319442
+BUN_max,0.01122666934466095
+BUN_mean,0.010460127220008235
+BUN_min,0.010160073650405114
+heartrate_mean,0.009679931223263789
+PTT_mean,0.009520799348182523
+RDW_min,0.009444123205265192
+AST (SGOT)_min,0.00909525112093362
+FiO2_mean,0.008996133645355661
+PTT_max,0.008787977555457568
+heartrate_max,0.00865459579918947
+respiration_mean,0.008381311109292102
+pH_min,0.008071390120214392
+lactate_mean,0.007851521565301531
+PTT_min,0.007468524236244725
+RDW_max,0.0070801415189385595
+age,0.006726946617069781
+paCO2_max,0.006555099834124549
+PT - INR_min,0.006401367083065832
+RDW_mean,0.006082206957579686
+PT_min,0.00600052550290523
+Base Excess_mean,0.005714256548371505
+PT_mean,0.0056560615057429965
+PT_max,0.005378290716534684
+pH_std,0.005363312709511156
+creatinine_min,0.005318914744805022
+-lymphs_mean,0.005295544328179226
+Base Excess_min,0.005294823482630422
+creatinine_mean,0.004875628582517784
+noninvasivesystolic_count,0.004829821307840617
+noninvasivediastolic_max,0.004825878781750074
+creatinine_max,0.004789741939870749
+noninvasivesystolic_min,0.004731370775555447
+respiration_min,0.004544705909217336
+FiO2_min,0.004468718970711869
+albumin_min,0.004453908415848302
+noninvasivesystolic_mean,0.00440467210446308
+WBC x 1000_min,0.004362056963901311
+noninvasivediastolic_count,0.004215312224963233
+noninvasivesystolic_cv,0.004052457518437893
+-lymphs_min,0.003944131275561699
+-lymphs_max,0.0039018872542338373
+noninvasivemean_count,0.003781218150244888
+heartrate_std,0.003621326596432144
+total protein_mean,0.0036078143583005203
+albumin_mean,0.0035952362787481395
+WBC x 1000_max,0.003548045331147633
+TV_min,0.003538597459315563
+WBC x 1000_mean,0.0034831996981963694
+heartrate_min,0.0033968538681040687
+bicarbonate_min,0.0033803316006757503
+bedside glucose_max,0.003195335189044083
+total bilirubin_mean,0.00316667906809779
+ALT (SGPT)_mean,0.0031539293608182435
+pH_mean,0.0030699275839255347
+heartrate_count,0.003028846339649332
+-polys_max,0.002996556425439891
+RBC_max,0.002971560763314462
+total bilirubin_max,0.0029080596216514193
+Base Excess_max,0.0028940380476020337
+-eos_min,0.002781047985656205
+respiration_max,0.00276600172220887
+bicarbonate_mean,0.002652294008560202
+TV_max,0.002651128802091363
+-eos_mean,0.002643960671322899
+bedside glucose_mean,0.002584033808126549
+noninvasivemean_max,0.002573000522124037
+lactate_max,0.0025720066866481853
+albumin_max,0.0024801893905687157
+gender_Female,0.0024717875653736524
+sao2_min,0.0023687121941879203
+gender_Male,0.0023405198016657725
+bicarbonate_max,0.0023240190212176727
+FiO2_std,0.002317009064611831
+-basos_min,0.0022459097041024525
+platelets x 1000_min,0.0022200582603102304
+platelets x 1000_max,0.0022115724993896206
+respiration_count,0.00215929387333557
+O2 Sat (%)_std,0.002146551937799646
+paCO2_mean,0.0021378743165540804
+noninvasivemean_cv,0.0021175289320407714
+TV_mean,0.002084255471081933
+-eos_max,0.002073939297916092
+total protein_min,0.0020556980951419645
+noninvasivediastolic_cv,0.002045202226486071
+platelets x 1000_mean,0.0020166439653153583
+-polys_mean,0.001961667567762168
+ALT (SGPT)_max,0.0019425864965501361
+respiration_cv,0.0018760224033509926
+noninvasivemean_mean,0.001843885494757012
+total protein_max,0.001834753994200933
+RBC_mean,0.001834589550413743
+creatinine_std,0.0018177860680311944
+lactate_std,0.0018157949780706751
+-basos_mean,0.00171991245896662
+RBC_min,0.0016595781289140499
+noninvasivemean_std,0.0016283044947923765
+noninvasivediastolic_std,0.0016057419484544397
+Hgb_max,0.0015846577097637672
+-basos_max,0.001550542952753074
+sao2_count,0.001479436261959047
+Carboxyhemoglobin_min,0.001448217925773488
+PT - INR_max,0.0014479328558923792
+paCO2_min,0.0014443493809016595
+PT - INR_mean,0.0014264894569415785
+MCHC_min,0.0013840445878397381
+MCH_mean,0.001371037854962478
+bedside glucose_min,0.0013541995598098614
+calcium_mean,0.0013494405298515794
+WBC x 1000_std,0.001323520852457573
+paO2_std,0.0013028041948013375
+ALT (SGPT)_min,0.0013026825927699723
+Hgb_mean,0.001288562736052464
+MCV_std,0.001271733498469185
+troponin - I_mean,0.0012635573483356405
+paO2_min,0.0012375186949591006
+noninvasivesystolic_std,0.0012262022471615137
+anion gap_mean,0.0012069422408277836
+calcium_std,0.0011963024544551545
+MCV_min,0.0011819569045279628
+Methemoglobin_min,0.0011777850877424802
+sao2_max,0.0011693890983740618
+MCHC_mean,0.0011649235813526839
+pH_max,0.0011647797958134443
+total bilirubin_min,0.0011482584775370042
+Total CO2_std,0.0011436680886265666
+MCV_mean,0.0011262450975408039
+noninvasivemean_min,0.0011088556231787306
+glucose_std,0.0011023734498753846
+Methemoglobin_mean,0.0010859071911803449
+PTT_std,0.0010834013648958617
+anion gap_min,0.0010820885783033932
+calcium_min,0.0010434420201305952
+Methemoglobin_max,0.00103456769539944
+noninvasivediastolic_min,0.0010285319990811677
+urinary specific gravity_mean,0.0010263221431592675
+magnesium_max,0.0010118215907275999
+sao2_std,0.0009991249449817182
+platelets x 1000_std,0.000996633701749586
+calcium_max,0.0009905269111386299
+noninvasivesystolic_max,0.0009887423100838552
+HCO3_mean,0.0009705995223868082
+paO2_max,0.0009619824992563186
+-monos_mean,0.0009567510536644323
+sao2_cv,0.0009478732597776829
+HCO3_std,0.0009379484097887956
+admissionweight,0.0009348683732213827
+troponin - I_max,0.0009278386004471023
+-monos_min,0.0009222242400975061
+-bands_min,0.0009165233144062898
+MCH_max,0.0009126575299958625
+Hct_mean,0.0009125351596516126
+MCH_min,0.0009021801576563677
+HCO3_max,0.000899105605234046
+paO2_mean,0.0008910087249398321
+troponin - I_min,0.0008866873908421776
+O2 Sat (%)_mean,0.0008820546477143934
+respiration_std,0.0008632494523180754
+anion gap_std,0.0008596784773706727
+-polys_min,0.0008586319502722324
+Hct_max,0.000851963405775121
+MPV_min,0.0008397509108979806
+MCHC_max,0.0008370605049684307
+-bands_max,0.0008230445147787814
+chloride_mean,0.0008198195064164115
+chloride_min,0.0008194962926296829
+O2 Sat (%)_min,0.0008133935751449037
+MCV_max,0.0008101627578146065
+noninvasivediastolic_mean,0.0008087173674643526
+MPV_mean,0.0007917029219213556
+systemicdiastolic_count,0.0007903508684759524
+systemicsystolic_max,0.0007701751202485415
+Hgb_min,0.0007637492251310486
+glucose_min,0.0007617519573933425
+Hct_min,0.0007524869877844639
+glucose_max,0.000734329616808216
+MPV_max,0.0007101939014026361
+sodium_max,0.0007039921565562904
+-bands_mean,0.0007037049466791476
+systemicsystolic_mean,0.0007028390790678823
+-monos_max,0.0006950236555512724
+Total CO2_max,0.000682605972146129
+sodium_std,0.000681917485649777
+ethnicity_African American,0.000676448219385954
+sao2_mean,0.0006710463006692349
+heartrate_cv,0.0006651067278623321
+chloride_max,0.0006617632130514775
+chloride_std,0.0006603648264713723
+sodium_min,0.0006581323916879043
+PT - INR_std,0.0006526400633896002
+TSH_min,0.0006371715021468672
+Total CO2_mean,0.0006300048615037293
+systemicsystolic_count,0.000627282318599204
+sodium_mean,0.0006224018052622538
+systemicmean_count,0.0006185406528347085
+systemicmean_std,0.0006091190398768748
+Base Deficit_max,0.0005932334935650488
+phosphate_mean,0.0005894378875668279
+bedside glucose_std,0.0005852492805652229
+urinary specific gravity_max,0.000585064901810864
+magnesium_mean,0.0005803009098968065
+glucose_mean,0.0005719426525849379
+HCO3_min,0.0005610761882207863
+TSH_mean,0.0005499270880428067
+Base Deficit_mean,0.0005482992967457297
+alkaline phos._mean,0.00054097162299282
+anion gap_max,0.0005285504100874778
+Hgb_std,0.0005050429510327984
+TSH_max,0.0005049536426114478
+Total CO2_min,0.0005034325097679228
+Carboxyhemoglobin_max,0.0005021132469629156
+MPV_std,0.0005017081749235276
+alkaline phos._max,0.000501024674786167
+Base Excess_std,0.0004853328998227525
+alkaline phos._min,0.00048468100076955216
+Carboxyhemoglobin_mean,0.0004833957001044724
+potassium_min,0.0004752901382157774
+Digoxin_max,0.0004597744487311415
+systemicsystolic_cv,0.00045223701277126205
+temperature_mean,0.00044837516844691027
+phosphate_max,0.00044409694282823513
+troponin - I_std,0.00043902856180806854
+total protein_std,0.0004374090912017663
+systemicsystolic_std,0.000434633967298226
+O2 Sat (%)_max,0.00042913306896136066
+potassium_max,0.00041958831101278745
+ethnicity_Caucasian,0.00040599594611778907
+urinary creatinine_mean,0.0004048569219021088
+systemicdiastolic_cv,0.00039837971883395707
+systemicmean_cv,0.0003973069268797706
+BUN_std,0.0003962106664330514
+troponin - T_max,0.00038563493473543016
+Base Deficit_std,0.00038276765300603933
+urinary specific gravity_min,0.00037512794439657055
+potassium_mean,0.00037386818071976816
+troponin - T_mean,0.00037135142563997565
+systemicdiastolic_std,0.00037079512269216805
+CPK_mean,0.0003683258852562127
+magnesium_min,0.0003591637488926515
+Hct_std,0.0003525636935118688
+Base Deficit_min,0.00035216893308222865
+systemicmean_max,0.0003458988489112893
+PT_std,0.00033771188392223844
+CPK_std,0.00033769126871301163
+RDW_std,0.0003314935737242468
+serum osmolality_min,0.00032679529523324866
+serum osmolality_max,0.00032299490426535563
+fibrinogen_min,0.0003177046774842809
+temperature_std,0.0003137374557109529
+potassium_std,0.00031198421939748
+bicarbonate_std,0.0003111601864879268
+temperature_cv,0.00030843543581063435
+Digoxin_mean,0.000304712464437366
+O2 Content_max,0.0002945633872958968
+phosphate_min,0.0002845276253477509
+CPK_min,0.00028422839649555707
+systemicsystolic_min,0.0002801076667348724
+systemicdiastolic_mean,0.0002765630798390289
+serum osmolality_mean,0.00027579500972236913
+ionized calcium_max,0.0002677618837580828
+ionized calcium_mean,0.0002662579472298069
+Digoxin_min,0.0002626975821465697
+AST (SGOT)_std,0.0002594802752072176
+urinary creatinine_max,0.0002574179910775911
+direct bilirubin_min,0.0002561688773192796
+systemicmean_mean,0.0002556689722191135
+systemicdiastolic_min,0.0002527641247440216
+troponin - T_min,0.00024527765135667
+CPK_max,0.00024357286132399493
+ethnicity_Asian,0.00024281761609727217
+magnesium_std,0.00023820624652239966
+Oxyhemoglobin_mean,0.0002236621594615944
+systemicdiastolic_max,0.0002224630985031672
+Ferritin_min,0.0002208281972003181
+ethnicity_Other/Unknown,0.00021841722582480188
+phosphate_std,0.00021492021718813614
+fibrinogen_max,0.0002139743265772723
+temperature_min,0.0002076296572621187
+MCHC_std,0.00020475810472986262
+TV_std,0.0001931697016872278
+Carboxyhemoglobin_std,0.00019222010263735632
+CPK-MB_std,0.0001873511300879363
+temperature_max,0.00018392140580688495
+O2 Content_min,0.00018374029770691237
+direct bilirubin_max,0.00017771719843279258
+LPM O2_mean,0.00017765066859579232
+Methemoglobin_std,0.0001766142342584123
+RBC_std,0.00017290789227570073
+MCH_std,0.00017066952229133367
+lipase_mean,0.00016640113788497383
+BNP_max,0.0001662779627179904
+LDH_max,0.0001600554628154596
+Oxyhemoglobin_max,0.00015984977724509402
+urinary creatinine_min,0.00015727271321743335
+Ferritin_max,0.00015464302800191696
+Respiratory Rate_max,0.0001545489248222414
+Oxyhemoglobin_min,0.00015431745392518358
+urinary sodium_mean,0.00014879704063058323
+fibrinogen_mean,0.00014590356550192498
+temperature_count,0.0001423731654185824
+Temperature_max,0.00014028102612583353
+systemicmean_min,0.00013886968468180587
+CPK-MB_min,0.00013755074545351276
+albumin_std,0.00013636581111439424
+direct bilirubin_mean,0.00012747227846304776
+LPM O2_min,0.00012460231689565004
+-lymphs_std,0.00012424289688547653
+ionized calcium_std,0.00012391228112087108
+Vent Rate_min,0.00011194523159521792
+BNP_mean,0.00010707103293544641
+ALT (SGPT)_std,0.00010672485849708518
+prealbumin_mean,0.00010020390819197666
+O2 Content_mean,9.785462406818744e-05
+alkaline phos._std,8.943602592896677e-05
+ionized calcium_min,8.614989710296593e-05
+Ferritin_mean,8.301802864671777e-05
+troponin - T_std,7.983090894815963e-05
+BNP_min,7.864965595940093e-05
+amylase_min,7.801678260310306e-05
+-polys_std,7.659836664349666e-05
+urinary sodium_min,7.348524347287965e-05
+Temperature_mean,7.284888093530237e-05
+PEEP_max,7.027063181902355e-05
+PTT ratio_max,6.953289436896113e-05
+Respiratory Rate_min,6.943349006135445e-05
+-eos_std,6.808183387253283e-05
+free T4_mean,6.661818890717677e-05
+triglycerides_max,6.560461897179833e-05
+serum osmolality_std,6.535025277817615e-05
+CPK-MB INDEX_max,6.466016148171467e-05
+ethanol_mean,6.120124913703857e-05
+CPK-MB_mean,5.4712036339508226e-05
+ethanol_min,5.225824089518742e-05
+haptoglobin_min,5.178119955989304e-05
+Vancomycin - random_max,5.007632101440779e-05
+amylase_max,4.8476329618762475e-05
+amylase_mean,4.8155855615769853e-05
+LDH_mean,4.8082950723808434e-05
+triglycerides_mean,4.789488307680135e-05
+Vent Rate_max,4.757740777228574e-05
+LDH_min,4.557747152935405e-05
+Vancomycin - random_mean,4.53198581560585e-05
+free T4_min,4.491507600759216e-05
+Vent Rate_mean,4.453770248290151e-05
+prealbumin_min,4.2150177615491455e-05
+triglycerides_min,4.1423450097364056e-05
+ethanol_max,4.139400272617996e-05
+CPK-MB_max,4.095784901141373e-05
+-monos_std,4.073993048201537e-05
+total bilirubin_std,4.04763831791525e-05
+Respiratory Rate_mean,3.934826149926827e-05
+Temperature_min,3.8610201235453585e-05
+Vancomycin - random_min,3.8420719344926434e-05
+-basos_std,3.806323189251533e-05
+LDL_min,3.769023781537889e-05
+LPM O2_max,3.541345280948354e-05
+free T4_max,3.521944015807978e-05
+Vitamin B12_max,3.126923573183752e-05
+CPK-MB INDEX_std,2.964087840430364e-05
+uric acid_min,2.780652909255644e-05
+PTT ratio_mean,2.7078960819368028e-05
+urinary sodium_max,2.6882270388398108e-05
+Vitamin B12_min,2.589684002506595e-05
+CPK-MB INDEX_min,2.517033078615531e-05
+O2 Content_std,2.388792387953941e-05
+Fe_mean,2.3597569101312003e-05
+WBC's in urine_mean,2.3265841810105007e-05
+CPK-MB INDEX_mean,2.1651540867572016e-05
+WBC's in urine_max,2.069989431822052e-05
+cortisol_mean,2.0525297849035994e-05
+PEEP_mean,1.7991775148990857e-05
+total cholesterol_mean,1.7542260906488626e-05
+haptoglobin_mean,1.7359393472279418e-05
+haptoglobin_max,1.5233163334961204e-05
+prealbumin_max,1.493020948482206e-05
+ethnicity_Hispanic,1.3444664276871264e-05
+HDL_min,1.28815229302079e-05
+HDL_mean,1.1944352891769925e-05
+Oxyhemoglobin_std,1.1628584982084675e-05
+LDL_max,1.1345469076297863e-05
+ammonia_max,1.056504007883667e-05
+Fe_min,8.80316228919616e-06
+Vancomycin - trough_min,8.724924056611397e-06
+ammonia_min,8.175957698305176e-06
+transferrin_max,8.1166515664595e-06
+total cholesterol_min,7.716025980955367e-06
+total cholesterol_max,6.654251816710416e-06
+Respiratory Rate_std,5.563939773152304e-06
+Pressure Support_max,5.55407631619784e-06
+Temperature_std,4.558827642701717e-06
+HDL_max,2.447971705200667e-06
+lipase_max,2.356319101688639e-06
+uric acid_max,2.2113902941408004e-06
+lipase_min,2.1384919873322535e-06
+cortisol_max,1.915963276149643e-06
+Spontaneous Rate_min,1.3513677166318697e-06
+ammonia_mean,1.0326445497671037e-06
+WBC's in urine_min,7.64130306928902e-07
+Peak Airway/Pressure_max,7.049650289413201e-07
+ESR_mean,0.0
+Device_mean,0.0
+ESR_min,0.0
+Fe/TIBC Ratio_min,0.0
+CRP-hs_min,0.0
+Device_min,0.0
+CRP_min,0.0
+urinary osmolality_min,0.0
+protein C_min,0.0
+protein - CSF_min,0.0
+protein S_min,0.0
+reticulocyte count_min,0.0
+salicylate_min,0.0
+transferrin_min,0.0
+WBC's in urine_std,0.0
+transferrin_std,0.0
+CRP-hs_mean,0.0
+Gentamicin - random_min,0.0
+TSH_std,0.0
+Spontaneous Rate_std,0.0
+fibrinogen_std,0.0
+Theophylline_std,0.0
+Vent Rate_std,0.0
+Vent Other_std,0.0
+Vancomycin - random_std,0.0
+urinary osmolality_std,0.0
+direct bilirubin_std,0.0
+ethanol_std,0.0
+urinary specific gravity_std,0.0
+urinary sodium_std,0.0
+Vancomycin - trough_max,0.0
+Vent Other_max,0.0
+Theophylline_max,0.0
+Tobramycin - peak_max,0.0
+Tacrolimus-FK506_max,0.0
+T3RU_max,0.0
+T4_max,0.0
+TIBC_max,0.0
+Spontaneous Rate_max,0.0
+Pressure Control_max,0.0
+Phenytoin_max,0.0
+T3_max,0.0
+Acetaminophen_min,0.0
+24 h urine protein_min,0.0
+urinary osmolality_mean,0.0
+uric acid_mean,0.0
+Lithium_max,0.0
+CRP_mean,0.0
+transferrin_mean,0.0
+Device_max,0.0
+CRP-hs_max,0.0
+CRP_max,0.0
+24 h urine protein_max,0.0
+Gentamicin - random_max,0.0
+Peak Airway/Pressure_mean,0.0
+Lithium_mean,0.0
+24 h urine protein_mean,0.0
+Acetaminophen_mean,0.0
+folate_min,0.0
+cortisol_min,0.0
+cd 4_min,0.0
+glucose - CSF_min,0.0
+Fe/TIBC Ratio_mean,0.0
+Gentamicin - random_mean,0.0
+LDL_mean,0.0
+Acetaminophen_max,0.0
+Fe_max,0.0
+ESR_max,0.0
+Fe/TIBC Ratio_max,0.0
+free T4_std,0.0
+cortisol_std,0.0
+prolactin_min,0.0
+myoglobin_min,0.0
+Vitamin B12_std,0.0
+amylase_std,0.0
+ammonia_std,0.0
+WBC's in cerebrospinal fluid_min,0.0
+Vent Other_mean,0.0
+WBC's in cerebrospinal fluid_max,0.0
+WBC's in body fluid_min,0.0
+Tobramycin - peak_min,0.0
+Vent Other_min,0.0
+T4_min,0.0
+TIBC_min,0.0
+Tacrolimus-FK506_min,0.0
+Theophylline_min,0.0
+Vitamin B12_mean,0.0
+WBC's in body fluid_mean,0.0
+protein S_mean,0.0
+folate_max,0.0
+reticulocyte count_mean,0.0
+Tobramycin - peak_mean,0.0
+Vancomycin - trough_mean,0.0
+WBC's in body fluid_max,0.0
+BNP_std,0.0
+Acetaminophen_std,0.0
+-bands_std,0.0
+urinary osmolality_max,0.0
+reticulocyte count_max,0.0
+salicylate_max,0.0
+protein C_max,0.0
+protein S_max,0.0
+glucose - CSF_max,0.0
+salicylate_mean,0.0
+WBC's in cerebrospinal fluid_mean,0.0
+myoglobin_max,0.0
+prolactin_max,0.0
+protein - CSF_max,0.0
+cd 4_max,0.0
+PEEP_min,0.0
+T3_min,0.0
+Pressure Support_min,0.0
+Phenytoin_min,0.0
+T3RU_min,0.0
+glucose - CSF_mean,0.0
+folate_mean,0.0
+CRP_std,0.0
+Device_std,0.0
+ESR_std,0.0
+Lithium_min,0.0
+PTT ratio_min,0.0
+Peak Airway/Pressure_min,0.0
+Pressure Control_min,0.0
+Theophylline_mean,0.0
+ethnicity_Native American,0.0
+cd 4_mean,0.0
+LPM O2_std,0.0
+LDL_std,0.0
+LDH_std,0.0
+HDL_std,0.0
+Ferritin_std,0.0
+Fe/TIBC Ratio_std,0.0
+Fe_std,0.0
+Peak Airway/Pressure_std,0.0
+Pressure Support_std,0.0
+Pressure Control_std,0.0
+Phenytoin_mean,0.0
+triglycerides_std,0.0
+Pressure Control_mean,0.0
+Phenytoin_std,0.0
+PEEP_std,0.0
+PTT ratio_std,0.0
+T3_mean,0.0
+Spontaneous Rate_mean,0.0
+Pressure Support_mean,0.0
+T3RU_mean,0.0
+Tacrolimus-FK506_mean,0.0
+lipase_std,0.0
+TIBC_mean,0.0
+T4_mean,0.0
+salicylate_std,0.0
+myoglobin_std,0.0
+prolactin_mean,0.0
+myoglobin_mean,0.0
+protein - CSF_mean,0.0
+protein C_mean,0.0
+total cholesterol_std,0.0
+urinary creatinine_std,0.0

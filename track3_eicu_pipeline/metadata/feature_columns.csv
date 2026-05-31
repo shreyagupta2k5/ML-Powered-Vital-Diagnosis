@@ -1,0 +1,562 @@
+0
+age
+admissionweight
+heartrate_mean
+heartrate_min
+heartrate_max
+heartrate_std
+heartrate_count
+respiration_mean
+respiration_min
+respiration_max
+respiration_std
+respiration_count
+sao2_mean
+sao2_min
+sao2_max
+sao2_std
+sao2_count
+temperature_mean
+temperature_min
+temperature_max
+temperature_std
+temperature_count
+systemicsystolic_mean
+systemicsystolic_min
+systemicsystolic_max
+systemicsystolic_std
+systemicsystolic_count
+systemicdiastolic_mean
+systemicdiastolic_min
+systemicdiastolic_max
+systemicdiastolic_std
+systemicdiastolic_count
+systemicmean_mean
+systemicmean_min
+systemicmean_max
+systemicmean_std
+systemicmean_count
+heartrate_cv
+respiration_cv
+sao2_cv
+temperature_cv
+systemicsystolic_cv
+systemicdiastolic_cv
+systemicmean_cv
+noninvasivesystolic_mean
+noninvasivesystolic_min
+noninvasivesystolic_max
+noninvasivesystolic_std
+noninvasivesystolic_count
+noninvasivediastolic_mean
+noninvasivediastolic_min
+noninvasivediastolic_max
+noninvasivediastolic_std
+noninvasivediastolic_count
+noninvasivemean_mean
+noninvasivemean_min
+noninvasivemean_max
+noninvasivemean_std
+noninvasivemean_count
+noninvasivesystolic_cv
+noninvasivediastolic_cv
+noninvasivemean_cv
+-bands_mean
+-basos_mean
+-eos_mean
+-lymphs_mean
+-monos_mean
+-polys_mean
+24 h urine protein_mean
+ALT (SGPT)_mean
+AST (SGOT)_mean
+Acetaminophen_mean
+BNP_mean
+BUN_mean
+Base Deficit_mean
+Base Excess_mean
+CPK_mean
+CPK-MB_mean
+CPK-MB INDEX_mean
+CRP_mean
+CRP-hs_mean
+Carboxyhemoglobin_mean
+Device_mean
+Digoxin_mean
+ESR_mean
+Fe_mean
+Fe/TIBC Ratio_mean
+Ferritin_mean
+FiO2_mean
+Gentamicin - random_mean
+HCO3_mean
+HDL_mean
+Hct_mean
+Hgb_mean
+LDH_mean
+LDL_mean
+LPM O2_mean
+Lithium_mean
+MCH_mean
+MCHC_mean
+MCV_mean
+MPV_mean
+Methemoglobin_mean
+O2 Content_mean
+O2 Sat (%)_mean
+Oxyhemoglobin_mean
+PEEP_mean
+PT_mean
+PT - INR_mean
+PTT_mean
+PTT ratio_mean
+Peak Airway/Pressure_mean
+Phenytoin_mean
+Pressure Control_mean
+Pressure Support_mean
+RBC_mean
+RDW_mean
+Respiratory Rate_mean
+Spontaneous Rate_mean
+T3_mean
+T3RU_mean
+T4_mean
+TIBC_mean
+TSH_mean
+TV_mean
+Tacrolimus-FK506_mean
+Temperature_mean
+Theophylline_mean
+Tobramycin - peak_mean
+Total CO2_mean
+Vancomycin - random_mean
+Vancomycin - trough_mean
+Vent Other_mean
+Vent Rate_mean
+Vitamin B12_mean
+WBC x 1000_mean
+WBC's in body fluid_mean
+WBC's in cerebrospinal fluid_mean
+WBC's in urine_mean
+albumin_mean
+alkaline phos._mean
+ammonia_mean
+amylase_mean
+anion gap_mean
+bedside glucose_mean
+bicarbonate_mean
+calcium_mean
+cd 4_mean
+chloride_mean
+cortisol_mean
+creatinine_mean
+direct bilirubin_mean
+ethanol_mean
+fibrinogen_mean
+folate_mean
+free T4_mean
+glucose_mean
+glucose - CSF_mean
+haptoglobin_mean
+ionized calcium_mean
+lactate_mean
+lipase_mean
+magnesium_mean
+myoglobin_mean
+pH_mean
+paCO2_mean
+paO2_mean
+phosphate_mean
+platelets x 1000_mean
+potassium_mean
+prealbumin_mean
+prolactin_mean
+protein - CSF_mean
+protein C_mean
+protein S_mean
+reticulocyte count_mean
+salicylate_mean
+serum osmolality_mean
+sodium_mean
+total bilirubin_mean
+total cholesterol_mean
+total protein_mean
+transferrin_mean
+triglycerides_mean
+troponin - I_mean
+troponin - T_mean
+uric acid_mean
+urinary creatinine_mean
+urinary osmolality_mean
+urinary sodium_mean
+urinary specific gravity_mean
+-bands_min
+-basos_min
+-eos_min
+-lymphs_min
+-monos_min
+-polys_min
+24 h urine protein_min
+ALT (SGPT)_min
+AST (SGOT)_min
+Acetaminophen_min
+BNP_min
+BUN_min
+Base Deficit_min
+Base Excess_min
+CPK_min
+CPK-MB_min
+CPK-MB INDEX_min
+CRP_min
+CRP-hs_min
+Carboxyhemoglobin_min
+Device_min
+Digoxin_min
+ESR_min
+Fe_min
+Fe/TIBC Ratio_min
+Ferritin_min
+FiO2_min
+Gentamicin - random_min
+HCO3_min
+HDL_min
+Hct_min
+Hgb_min
+LDH_min
+LDL_min
+LPM O2_min
+Lithium_min
+MCH_min
+MCHC_min
+MCV_min
+MPV_min
+Methemoglobin_min
+O2 Content_min
+O2 Sat (%)_min
+Oxyhemoglobin_min
+PEEP_min
+PT_min
+PT - INR_min
+PTT_min
+PTT ratio_min
+Peak Airway/Pressure_min
+Phenytoin_min
+Pressure Control_min
+Pressure Support_min
+RBC_min
+RDW_min
+Respiratory Rate_min
+Spontaneous Rate_min
+T3_min
+T3RU_min
+T4_min
+TIBC_min
+TSH_min
+TV_min
+Tacrolimus-FK506_min
+Temperature_min
+Theophylline_min
+Tobramycin - peak_min
+Total CO2_min
+Vancomycin - random_min
+Vancomycin - trough_min
+Vent Other_min
+Vent Rate_min
+Vitamin B12_min
+WBC x 1000_min
+WBC's in body fluid_min
+WBC's in cerebrospinal fluid_min
+WBC's in urine_min
+albumin_min
+alkaline phos._min
+ammonia_min
+amylase_min
+anion gap_min
+bedside glucose_min
+bicarbonate_min
+calcium_min
+cd 4_min
+chloride_min
+cortisol_min
+creatinine_min
+direct bilirubin_min
+ethanol_min
+fibrinogen_min
+folate_min
+free T4_min
+glucose_min
+glucose - CSF_min
+haptoglobin_min
+ionized calcium_min
+lactate_min
+lipase_min
+magnesium_min
+myoglobin_min
+pH_min
+paCO2_min
+paO2_min
+phosphate_min
+platelets x 1000_min
+potassium_min
+prealbumin_min
+prolactin_min
+protein - CSF_min
+protein C_min
+protein S_min
+reticulocyte count_min
+salicylate_min
+serum osmolality_min
+sodium_min
+total bilirubin_min
+total cholesterol_min
+total protein_min
+transferrin_min
+triglycerides_min
+troponin - I_min
+troponin - T_min
+uric acid_min
+urinary creatinine_min
+urinary osmolality_min
+urinary sodium_min
+urinary specific gravity_min
+-bands_max
+-basos_max
+-eos_max
+-lymphs_max
+-monos_max
+-polys_max
+24 h urine protein_max
+ALT (SGPT)_max
+AST (SGOT)_max
+Acetaminophen_max
+BNP_max
+BUN_max
+Base Deficit_max
+Base Excess_max
+CPK_max
+CPK-MB_max
+CPK-MB INDEX_max
+CRP_max
+CRP-hs_max
+Carboxyhemoglobin_max
+Device_max
+Digoxin_max
+ESR_max
+Fe_max
+Fe/TIBC Ratio_max
+Ferritin_max
+FiO2_max
+Gentamicin - random_max
+HCO3_max
+HDL_max
+Hct_max
+Hgb_max
+LDH_max
+LDL_max
+LPM O2_max
+Lithium_max
+MCH_max
+MCHC_max
+MCV_max
+MPV_max
+Methemoglobin_max
+O2 Content_max
+O2 Sat (%)_max
+Oxyhemoglobin_max
+PEEP_max
+PT_max
+PT - INR_max
+PTT_max
+PTT ratio_max
+Peak Airway/Pressure_max
+Phenytoin_max
+Pressure Control_max
+Pressure Support_max
+RBC_max
+RDW_max
+Respiratory Rate_max
+Spontaneous Rate_max
+T3_max
+T3RU_max
+T4_max
+TIBC_max
+TSH_max
+TV_max
+Tacrolimus-FK506_max
+Temperature_max
+Theophylline_max
+Tobramycin - peak_max
+Total CO2_max
+Vancomycin - random_max
+Vancomycin - trough_max
+Vent Other_max
+Vent Rate_max
+Vitamin B12_max
+WBC x 1000_max
+WBC's in body fluid_max
+WBC's in cerebrospinal fluid_max
+WBC's in urine_max
+albumin_max
+alkaline phos._max
+ammonia_max
+amylase_max
+anion gap_max
+bedside glucose_max
+bicarbonate_max
+calcium_max
+cd 4_max
+chloride_max
+cortisol_max
+creatinine_max
+direct bilirubin_max
+ethanol_max
+fibrinogen_max
+folate_max
+free T4_max
+glucose_max
+glucose - CSF_max
+haptoglobin_max
+ionized calcium_max
+lactate_max
+lipase_max
+magnesium_max
+myoglobin_max
+pH_max
+paCO2_max
+paO2_max
+phosphate_max
+platelets x 1000_max
+potassium_max
+prealbumin_max
+prolactin_max
+protein - CSF_max
+protein C_max
+protein S_max
+reticulocyte count_max
+salicylate_max
+serum osmolality_max
+sodium_max
+total bilirubin_max
+total cholesterol_max
+total protein_max
+transferrin_max
+triglycerides_max
+troponin - I_max
+troponin - T_max
+uric acid_max
+urinary creatinine_max
+urinary osmolality_max
+urinary sodium_max
+urinary specific gravity_max
+-bands_std
+-basos_std
+-eos_std
+-lymphs_std
+-monos_std
+-polys_std
+ALT (SGPT)_std
+AST (SGOT)_std
+Acetaminophen_std
+BNP_std
+BUN_std
+Base Deficit_std
+Base Excess_std
+CPK_std
+CPK-MB_std
+CPK-MB INDEX_std
+CRP_std
+Carboxyhemoglobin_std
+Device_std
+ESR_std
+Fe_std
+Fe/TIBC Ratio_std
+Ferritin_std
+FiO2_std
+HCO3_std
+HDL_std
+Hct_std
+Hgb_std
+LDH_std
+LDL_std
+LPM O2_std
+MCH_std
+MCHC_std
+MCV_std
+MPV_std
+Methemoglobin_std
+O2 Content_std
+O2 Sat (%)_std
+Oxyhemoglobin_std
+PEEP_std
+PT_std
+PT - INR_std
+PTT_std
+PTT ratio_std
+Peak Airway/Pressure_std
+Phenytoin_std
+Pressure Control_std
+Pressure Support_std
+RBC_std
+RDW_std
+Respiratory Rate_std
+Spontaneous Rate_std
+TSH_std
+TV_std
+Temperature_std
+Theophylline_std
+Total CO2_std
+Vancomycin - random_std
+Vent Other_std
+Vent Rate_std
+Vitamin B12_std
+WBC x 1000_std
+WBC's in urine_std
+albumin_std
+alkaline phos._std
+ammonia_std
+amylase_std
+anion gap_std
+bedside glucose_std
+bicarbonate_std
+calcium_std
+chloride_std
+cortisol_std
+creatinine_std
+direct bilirubin_std
+ethanol_std
+fibrinogen_std
+free T4_std
+glucose_std
+ionized calcium_std
+lactate_std
+lipase_std
+magnesium_std
+myoglobin_std
+pH_std
+paCO2_std
+paO2_std
+phosphate_std
+platelets x 1000_std
+potassium_std
+salicylate_std
+serum osmolality_std
+sodium_std
+total bilirubin_std
+total cholesterol_std
+total protein_std
+transferrin_std
+triglycerides_std
+troponin - I_std
+troponin - T_std
+urinary creatinine_std
+urinary osmolality_std
+urinary sodium_std
+urinary specific gravity_std
+gender_Female
+gender_Male
+ethnicity_African American
+ethnicity_Asian
+ethnicity_Caucasian
+ethnicity_Hispanic
+ethnicity_Native American
+ethnicity_Other/Unknown

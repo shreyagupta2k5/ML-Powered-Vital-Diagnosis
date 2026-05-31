@@ -1,0 +1,101 @@
+{
+  "track": 3,
+  "dataset": "eICU Collaborative Research Database Demo v2.0.1",
+  "task": "ICU mortality prediction (binary: Alive vs Expired)",
+  "best_model": "track3_best_model.pkl",
+  "best_model_type": "Random Forest (SMOTE-trained)",
+  "ensemble": {
+    "rf": "track3_rf_calibrated.pkl",
+    "xgb": "track3_xgb_calibrated.pkl",
+    "weights": [
+      0.45,
+      0.55
+    ]
+  },
+  "full_pipeline": "track3_full_pipeline.joblib",
+  "lstm": "track3_lstm_bidirectional.keras",
+  "feature_columns_file": "feature_columns.csv",
+  "n_features": 561,
+  "lstm_features": [
+    "heartrate",
+    "respiration",
+    "sao2",
+    "temperature",
+    "systemicsystolic",
+    "systemicdiastolic",
+    "systemicmean",
+    "WBC x 1000",
+    "creatinine",
+    "glucose",
+    "lactate",
+    "potassium",
+    "sodium"
+  ],
+  "lstm_sequence_length": 24,
+  "performance": {
+    "random_forest": {
+      "roc_auc": 0.8076,
+      "recall_at_015": 0.75,
+      "pr_auc": 0.2954
+    },
+    "xgboost": {
+      "roc_auc": 0.7834,
+      "recall_at_015": 0.5,
+      "pr_auc": 0.3208
+    },
+    "logistic_reg": {
+      "roc_auc": 0.6234,
+      "recall_at_015": 0.56
+    },
+    "cv_auc": {
+      "mean": 0.7782,
+      "std": 0.0692
+    },
+    "bootstrap_ci": {
+      "roc_auc": "0.7620 [0.5966 - 0.9039]"
+    }
+  },
+  "dataset_stats": {
+    "total_patients": 1623,
+    "expired": 78,
+    "alive": 1545,
+    "imbalance_ratio": "19.8:1",
+    "smote": "SMOTETomek k=5",
+    "train_balanced": "1231 alive | 1231 expired",
+    "test_original": "309 alive  | 16 expired",
+    "best_window": "24H"
+  },
+  "preprocessing": {
+    "drop_cols": [
+      "patientunitstayid",
+      "unitdischargeoffset",
+      "predictedicumortality",
+      "predictediculos",
+      "apachescore",
+      "acutephysiologyscore"
+    ],
+    "cat_cols": [
+      "gender",
+      "ethnicity"
+    ],
+    "imputer": "median (numeric) | most_frequent (categorical)",
+    "encoder": "OneHotEncoder"
+  },
+  "explainability": {
+    "global": "SHAP TreeExplainer",
+    "local": "LIME",
+    "top_features": [
+      "Methemoglobin_min",
+      "lactate_min",
+      "AST (SGOT)_max",
+      "paCO2_std",
+      "heartrate_max"
+    ]
+  },
+  "mlops": {
+    "drift_method": "PSI + KS test",
+    "retrain_trigger": "PSI > 0.50 OR >= 3 features with PSI > 0.25",
+    "monitor_interval": "10 minutes (demo)",
+    "retrain_rounds": 4
+  }
+}

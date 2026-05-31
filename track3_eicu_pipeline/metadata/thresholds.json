@@ -1,0 +1,19 @@
+{
+  "best_threshold": 0.11,
+  "operating_points": {
+    "A_max_recall": 0.05,
+    "B_best_f1": 0.17,
+    "C_best_precision": 0.17
+  },
+  "ensemble_weights": {
+    "rf_calibrated": 0.45,
+    "xgb_calibrated": 0.55
+  },
+  "recommended_threshold": 0.15,
+  "clinical_notes": {
+    "0.10": "Max recall \u2014 catches 14/16 expired, 164 false alarms",
+    "0.15": "Recommended \u2014 catches 12/16, 95 false alarms",
+    "0.30": "Balanced \u2014 catches 8/16, 23 false alarms",
+    "0.35": "Best F1 \u2014 catches 7/16, 11 false alarms"
+  }
+}

@@ -1,0 +1,6 @@
+patient_id,risk_score,alert_level,top_drivers,vital_flags,recommendation
+141765,0.0008,GREEN — Stable,"['gender (impact=+0.000)', 'age (impact=+0.000)', 'ethnicity (impact=+0.000)']",[],Continue routine monitoring.
+147784,0.0034,GREEN — Stable,"['gender (impact=+0.000)', 'age (impact=+0.000)', 'ethnicity (impact=+0.000)']",[],Continue routine monitoring.
+151179,0.0223,GREEN — Stable,"['gender (impact=+0.000)', 'age (impact=+0.000)', 'ethnicity (impact=+0.000)']","['Resp Rate=27.3 [normal 8–25]', 'Temperature=30.1 [normal 35–38.5]']",Continue routine monitoring.
+151867,0.0001,GREEN — Stable,"['gender (impact=+0.000)', 'age (impact=+0.000)', 'ethnicity (impact=+0.000)']",[],Continue routine monitoring.
+151900,0.003,GREEN — Stable,"['gender (impact=+0.000)', 'age (impact=+0.000)', 'ethnicity (impact=+0.000)']",[],Continue routine monitoring.

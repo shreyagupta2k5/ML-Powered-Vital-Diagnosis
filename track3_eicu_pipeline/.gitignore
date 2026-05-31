@@ -1,0 +1,27 @@
+# Large numpy arrays — share via Google Drive link instead
+artifacts/X_train_balanced.npy
+artifacts/X_seq.npy
+artifacts/y_seq.npy
+
+# Processed data files
+*.csv.gz
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+*.ipynb_checkpoints
+
+# Env
+.env
+venv/

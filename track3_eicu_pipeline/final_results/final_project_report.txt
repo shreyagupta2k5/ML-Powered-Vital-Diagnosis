@@ -1,0 +1,121 @@
+
+======================================================================
+ML-POWERED VITAL DIAGNOSIS — eICU FINAL REPORT
+======================================================================
+Generated : 2026-05-31 08:16
+Dataset   : eICU Collaborative Research Database Demo v2.0.1
+Project   : OHSL Internship 2026
+
+======================================================================
+1. DATASET SUMMARY
+======================================================================
+  Total ICU stays           : 1623
+  Expired patients          : 78  (4.81%)
+  Alive patients            : 1545 (95.19%)
+  Class imbalance ratio     : 19.8 : 1
+  Imbalance fix             : SMOTETomek
+  Post-SMOTE train set      : 1231 alive | 1231 expired
+  Test set (untouched)      : 309 alive  | 16 expired
+  Features (24h window)     : 562
+  Observation windows       : 6h | 12h | 24h
+
+======================================================================
+2. MODEL PERFORMANCE (Test set | Threshold = 0.15)
+======================================================================
+  Random Forest  ROC-AUC: 0.8076 | Recall: 0.75
+  XGBoost        ROC-AUC: 0.7834 | Recall: 0.50
+  Logistic Reg   ROC-AUC: 0.6234 | Recall: 0.56
+
+======================================================================
+3. THRESHOLD SENSITIVITY SUMMARY
+======================================================================
+ Threshold  Recall  Precision     F1  TP  FP  FN  TN  Alert_Fatigue
+      0.10   0.875     0.0787 0.1443  14 164   2 145         0.9213
+      0.15   0.750     0.1121 0.1951  12  95   4 214         0.8879
+      0.25   0.500     0.1667 0.2500   8  40   8 269         0.8333
+      0.30   0.500     0.2581 0.3404   8  23   8 286         0.7419
+      0.35   0.375     0.3529 0.3636   6  11  10 298         0.6471
+
+  RECOMMENDED THRESHOLDS:
+  → High sensitivity (safety-first) : 0.10  (catches 14/16)
+  → Balanced clinical use           : 0.25-0.30
+  → Best F1                         : 0.35  (F1 = 0.364)
+
+======================================================================
+4. OBSERVATION WINDOW COMPARISON
+======================================================================
+  6H  → AUC: 0.6185
+  12H → AUC: 0.7464
+  24H → AUC: 0.8261  ← best
+
+  Best window   : 24H (AUC 0.8261, F1 0.387)
+  Clinical note : More observation time = better prediction
+  6H model useful for very early triage (AUC 0.62)
+
+======================================================================
+5. 95% CONFIDENCE INTERVALS (10-Fold CV)
+======================================================================
+  ROC-AUC : 0.7837 [0.7278 – 0.8395]
+  F1      : 0.2481 [0.1498 – 0.3465]
+  Recall  : 0.2661 [0.1533 – 0.3788]
+
+======================================================================
+6. EXPLAINABILITY
+======================================================================
+  Method        : SHAP (global) + LIME (local)
+  Top features  : Methemoglobin_min, lactate_min,
+                  AST(SGOT)_max, paCO2_std, heartrate_max
+  Saved files   : shap_summary_plot.png, shap_bar_plot.png
+                  lime_explanation.png
+
+======================================================================
+7. DRIFT MONITORING
+======================================================================
+  Features analysed     : 558
+  Significant drift     : 0
+  Moderate drift        : 29
+  Stable                : 526
+  Method        : PSI + Kolmogorov-Smirnov test
+  Retrain rule  : PSI > 0.25 in >= 3 features → retrain
+
+======================================================================
+8. PATIENT RISK STRATIFICATION
+======================================================================
+  See final_results/patient_risk_stratification.csv
+
+======================================================================
+9. SAVED OUTPUT FILES
+======================================================================
+
+  [Models]
+    → best_model.pkl
+    → calibrated_random_forest.pkl
+    → xgboost_tuned.pkl
+    → gru_mortality_model.keras
+
+  [Charts]
+    → roc_curves_smote.png
+    → pr_roc_curves.png
+    → threshold_analysis.png
+    → alert_fatigue.png
+    → decision_curve.png
+    → learning_curve.png
+    → confusion_matrices.png
+    → model_comparison_final.png
+
+  [SHAP/LIME]
+    → shap_summary_plot.png
+    → shap_bar_plot.png
+    → lime_explanation.png
+
+  [Drift]
+    → drift_psi_chart.png
+    → drift_distribution.png
+    → drift_analysis_results.csv
+
+  [Data]
+    → patient_risk_stratification.csv
+    → threshold_analysis.csv
+    → window_full_comparison.csv
+    → confidence_intervals.csv
+    → shap_feature_importance.csv

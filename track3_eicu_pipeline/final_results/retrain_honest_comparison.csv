@@ -1,0 +1,4 @@
+Stage,ROC-AUC,Eval_Set
+Pre-retrain (XGBoost Cell 26),0.7607,Real test set (325 patients)
+Post-retrain (Cell 43B val split),0.9993,Combined split — SYNTHETIC DATA INCLUDED (unreliable)
+Post-retrain (honest — real test set),0.7607,Real test set (325 patients)

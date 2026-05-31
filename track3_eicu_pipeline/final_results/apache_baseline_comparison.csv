@@ -1,0 +1,5 @@
+Method,ROC-AUC,PR-AUC,Type
+XGBoost (ML),0.7834,0.3208,ML Model
+Random Forest (ML),0.7619,0.2954,ML Model
+apachescore,0.7022,0.2748,Clinical Baseline
+acutephysiologyscore,0.699,0.2593,Clinical Baseline
