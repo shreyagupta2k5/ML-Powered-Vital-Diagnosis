@@ -1,0 +1,18 @@
+
+
+CLINICAL FINDINGS
+
+1. Physiological waveform-derived features can successfully detect
+   hypotension, oxygen instability, and tachycardia events.
+
+2. MAP-based features are highly associated with hypotension risk.
+
+3. SPO2 variability and SPO2 drop contribute significantly
+   to oxygen desaturation detection.
+
+4. Heart rate variability contributes to tachycardia prediction.
+
+5. Tree-based models outperform linear models on physiological data.
+
+6. VitalDB waveforms contain clinically useful predictive information.
+

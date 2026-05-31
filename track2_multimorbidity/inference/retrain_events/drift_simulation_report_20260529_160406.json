@@ -1,0 +1,12 @@
+{
+  "drift_feature": "glucose_mean",
+  "drift_magnitude": 2.0,
+  "psi_threshold": 0.25,
+  "ks_alpha": 0.05,
+  "samples_injected": 100,
+  "drift_detected": false,
+  "psi_score": null,
+  "ks_pvalue": null,
+  "retrain_triggered": false,
+  "full_report": {}
+}

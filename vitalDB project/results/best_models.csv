@@ -1,0 +1,4 @@
+Target,Best_Model,Accuracy,Precision,Recall,F1,ROC_AUC
+Low SPO2,LogisticRegression,0.9957446808510638,0.979591836734694,1.0,0.9896907216494846,1.0
+Hypotension,RandomForest,1.0,1.0,1.0,1.0,1.0
+Tachycardia,LogisticRegression,0.9872340425531916,0.6666666666666666,1.0,0.8,1.0
