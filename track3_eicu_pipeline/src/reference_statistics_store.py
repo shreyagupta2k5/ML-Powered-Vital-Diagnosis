@@ -13,8 +13,14 @@ class ReferenceStatisticsStore:
 
     def __init__(
         self,
-        output_path: str = "/content/eicu_processed/reference_statistics.json",
+        output_path: str = "reference_statistics.json",
     ):
+        """
+        output_path: where to save/load the JSON baseline.
+        Default is current working directory (works locally + Colab).
+        Pass a full path like '/content/eicu_processed/reference_statistics.json'
+        when running in Colab.
+        """
         self.output_path = pathlib.Path(output_path)
         self.stats: dict = {}
 
@@ -43,7 +49,7 @@ class ReferenceStatisticsStore:
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.output_path, "w") as f:
             json.dump(self.stats, f, indent=4)
-        print(f"Reference statistics saved → {self.output_path}")
+        print(f"Saved → {self.output_path}")
 
     def load(self) -> dict:
         with open(self.output_path) as f:
