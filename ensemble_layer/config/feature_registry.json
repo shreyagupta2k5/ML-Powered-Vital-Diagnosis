@@ -1,0 +1,30 @@
+{
+  "description": "Unified feature naming convention across all tracks",
+  "unified_features": {
+    "heart_rate_mean": {
+      "track1_vitaldb": "mean_hr",
+      "track3_eicu": "heartrate_mean",
+      "description": "Average heart rate over observation window"
+    },
+    "oxygen_saturation_mean": {
+      "track1_vitaldb": "mean_spo2",
+      "track3_eicu": "sao2_mean",
+      "description": "Average oxygen saturation"
+    },
+    "oxygen_saturation_min": {
+      "track1_vitaldb": "min_spo2",
+      "track3_eicu": "sao2_min",
+      "description": "Minimum oxygen saturation observed"
+    },
+    "mean_arterial_pressure_mean": {
+      "track1_vitaldb": "mean_map",
+      "track3_eicu": "systemicmean_mean",
+      "track2_mimic": "map_mean",
+      "description": "Average Mean Arterial Pressure"
+    },
+    "glucose_mean": {
+      "track2_mimic": "glucose_mean",
+      "description": "Average glucose level"
+    }
+  }
+}

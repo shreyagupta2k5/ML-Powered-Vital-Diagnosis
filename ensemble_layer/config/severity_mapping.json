@@ -1,0 +1,28 @@
+{
+  "description": "Mapping of track-specific severity labels to Unified Ensemble Tiers",
+  "unified_tiers": ["CRITICAL", "HIGH", "MODERATE", "LOW"],
+  "track_mappings": {
+    "track1_eicu": {
+      "HIGH": "HIGH",
+      "MODERATE": "MODERATE",
+      "LOW": "LOW"
+    },
+    "track2_mimic": {
+      "HIGH": "HIGH",
+      "MODERATE": "MODERATE",
+      "LOW": "LOW"
+    },
+    "track3_vitaldb": {
+      "Critical": "CRITICAL",
+      "High": "HIGH",
+      "Moderate": "MODERATE",
+      "Low": "LOW"
+    }
+  },
+  "ensemble_logic": {
+    "CRITICAL_threshold": 0.85,
+    "HIGH_threshold": 0.60,
+    "MODERATE_threshold": 0.30,
+    "conflict_resolution": "highest_risk_wins"
+  }
+}
