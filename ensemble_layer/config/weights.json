@@ -1,0 +1,20 @@
+{
+  "track_weights": {
+    "track1_waveform": 0.25,
+    "track2_multimorbidity": 0.30,
+    "track3_mortality": 0.45
+  },
+  "track1_aggregation": {
+    "method": "max",
+    "description": "Use max probability among hypotension/tachycardia/low_spo2 for Track 1 score"
+  },
+  "risk_tiers": {
+    "HIGH": {"min": 0.60, "max": 1.0, "action": "IMMEDIATE_ESCALATION"},
+    "MODERATE": {"min": 0.30, "max": 0.60, "action": "MONITOR_CLOSELY"},
+    "LOW": {"min": 0.0, "max": 0.30, "action": "ROUTINE_CARE"}
+  },
+  "conflict_resolution": {
+    "rule": "highest_risk_wins",
+    "description": "If tracks disagree, use the highest risk tier among them"
+  }
+}
