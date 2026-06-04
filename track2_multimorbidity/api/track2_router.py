@@ -19,7 +19,7 @@ import joblib
 import pandas as pd
 import numpy as np
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import APIRouter, FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field, ConfigDict
 
 from track2_multimorbidity.inference.mlops_monitor import MLOpsMonitor
@@ -51,10 +51,15 @@ RETRAIN_DIR = PROJECT_ROOT / 'inference' / 'retrain_events'
 RETRAIN_DIR.mkdir(parents=True, exist_ok=True)
 
 # Initialize FastAPI application
-app = FastAPI(
-    title="Track 2 Multimorbidity Risk Engine",
-    description="Real-time leak-free ICU deterioration prediction with calibrated probabilities",
-    version="2.0.0"
+# app = FastAPI(
+#     title="Track 2 Multimorbidity Risk Engine",
+#     description="Real-time leak-free ICU deterioration prediction with calibrated probabilities",
+#     version="2.0.0"
+# )
+
+router = APIRouter(
+    prefix="/api/v1/track2",
+    tags=["Track 2 - Multimorbidity"]
 )
 
 # -----------------------------------------------------------------------------
@@ -168,7 +173,8 @@ class InferenceResponse(BaseModel):
 # SECTION 4: API ENDPOINTS
 # -----------------------------------------------------------------------------
 
-@app.get("/health", tags=["MLOps"])
+# @app.get("/health", tags=["MLOps"])
+@router.get("/health")
 async def health_check():
     return {
         "status": "healthy",
@@ -180,7 +186,11 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-@app.post("/predict_multimorbidity", response_model=InferenceResponse, tags=["Inference"])
+# @app.post("/predict_multimorbidity", response_model=InferenceResponse, tags=["Inference"])
+@router.post(
+    "/predict",
+    response_model=InferenceResponse
+)
 async def predict_crisis(request: PatientVitalsRequest):
     request_id = str(uuid.uuid4())
     start_time = time.time()
@@ -255,11 +265,18 @@ async def predict_crisis(request: PatientVitalsRequest):
 # SECTION 5: Startup & Local Entry
 # -----------------------------------------------------------------------------
 
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(mlops_monitor.monitor_loop(check_interval_minutes=10))
-    print("Background leak-free drift monitoring task initialized.")
+# @app.on_event("startup")
+# async def startup_event():
+#     asyncio.create_task(mlops_monitor.monitor_loop(check_interval_minutes=10))
+#     print("Background leak-free drift monitoring task initialized.")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+
+app = FastAPI(
+    title="Track 2 Multimorbidity Risk Engine",
+    version="2.0.0"
+)
+
+app.include_router(router)

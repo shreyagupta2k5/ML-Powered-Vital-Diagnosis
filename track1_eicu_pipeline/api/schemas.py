@@ -1,5 +1,5 @@
 """
-schemas.py — Pydantic models for Track 3 eICU Mortality Prediction API
+schemas.py — Pydantic models for Track 1 eICU Mortality Prediction API
 Author: Shreya Gupta
 """
 
@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class PredictRequest(BaseModel):
     """
-    Input payload for POST /api/v1/track3/predict.
+    Input payload for POST /api/v1/track1/predict.
 
     Accepts either:
       (a) a flat dict of pre-aggregated features (562 columns), or
@@ -140,7 +140,7 @@ class SHAPDriver(BaseModel):
 
 
 class PredictResponse(BaseModel):
-    """Full prediction response returned by POST /api/v1/track3/predict."""
+    """Full prediction response returned by POST /api/v1/track1/predict."""
 
     patient_id: Optional[str] = Field(None, description="Echo of input patient_id")
     mortality_probability: float = Field(

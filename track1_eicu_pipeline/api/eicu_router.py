@@ -1,15 +1,15 @@
 """
-eicu_router.py — FastAPI endpoints for Track 3 eICU Mortality Prediction
+eicu_router.py — FastAPI endpoints for Track 1 eICU Mortality Prediction
 Author: Shreya Gupta
 
 Endpoints
 ---------
-GET  /api/v1/track3/health     → model / service health check
-POST /api/v1/track3/predict    → ICU mortality probability + risk tier + SHAP drivers
+GET  /api/v1/track1/health     → model / service health check
+POST /api/v1/track1/predict    → ICU mortality probability + risk tier + SHAP drivers
 
 Usage (from project root)
 ---------
-    uvicorn track3_eicu_pipeline.api.eicu_router:app --reload --port 8003
+    uvicorn track1_eicu_pipeline.api.eicu_router:app --reload --port 8003
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # ── Project schemas ──────────────────────────────────────────────────────────
-from track3_eicu_pipeline.api.schemas import (
+from track1_eicu_pipeline.api.schemas import (
     HealthResponse,
     PredictRequest,
     PredictResponse,
@@ -44,10 +44,10 @@ from track3_eicu_pipeline.api.schemas import (
 # PATHS  (resolve relative to this file so it works from any working directory)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_HERE = pathlib.Path(__file__).resolve().parent          # …/track3_eicu_pipeline/api/
-_ROOT = _HERE.parent                                     # …/track3_eicu_pipeline/
+_HERE = pathlib.Path(__file__).resolve().parent          # …/track1_eicu_pipeline/api/
+_ROOT = _HERE.parent                                     # …/track1_eicu_pipeline/
 
-MODEL_PATH        = _ROOT / "models" / "track3_best_model.pkl"
+MODEL_PATH        = _ROOT / "models" / "track1_best_model.pkl"
 FEATURE_COLS_PATH = _ROOT / "metadata" / "feature_columns.csv"
 LOG_DIR           = _ROOT / "logs"
 LOG_PATH          = LOG_DIR / "predictions.csv"
@@ -60,13 +60,15 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
 )
-logger = logging.getLogger("track3.eicu_router")
+# logger = logging.getLogger("track3.eicu_router")
+logger = logging.getLogger("track1.eicu_router")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 
-MODEL_VERSION     = "track3_random_forest_v1.0"
+# MODEL_VERSION     = "track3_random_forest_v1.0"
+MODEL_VERSION = "track1_random_forest_v1.0"
 ALERT_THRESHOLD   = 0.15          # from notebook: recommended balanced threshold
 
 # Risk-tier thresholds (aligned with clinical_decision_summary.csv)
@@ -351,7 +353,11 @@ def _risk_tier(prob: float) -> str:
 # ROUTER
 # ─────────────────────────────────────────────────────────────────────────────
 
-router = APIRouter(prefix="/api/v1/track3", tags=["Track 3 — eICU Mortality"])
+# router = APIRouter(prefix="/api/v1/track3", tags=["Track 3 — eICU Mortality"])
+router = APIRouter(
+    prefix="/api/v1/track1",
+    tags=["Track 1 — eICU Mortality"]
+)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────
@@ -373,7 +379,7 @@ async def health_check() -> HealthResponse:
         model_version=MODEL_VERSION,
         feature_count=len(_feature_cols),
         message=(
-            "Model ready. Send POST /api/v1/track3/predict to score a patient."
+            "Model ready. Send POST /api/v1/track1/predict to score a patient."
             if loaded
             else f"Model not loaded. Expected file: {MODEL_PATH}"
         ),
@@ -485,7 +491,8 @@ async def predict(req: PredictRequest) -> PredictResponse:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Track 3 — eICU Mortality Prediction API",
+        # title="Track 3 — eICU Mortality Prediction API,"
+        title="Track 1 — eICU Mortality Prediction API",
         description=(
             "ML-powered ICU mortality early-warning system built on the "
             "eICU Collaborative Research Database. "
@@ -508,11 +515,17 @@ def create_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     async def root():
+        # return {
+        #     "service":  "Track 3 eICU Mortality Prediction",
+        #     "health":   "/api/v1/track3/health",
+        #     "predict":  "/api/v1/track3/predict",
+        #     "docs":     "/docs",
+        # }
         return {
-            "service":  "Track 3 eICU Mortality Prediction",
-            "health":   "/api/v1/track3/health",
-            "predict":  "/api/v1/track3/predict",
-            "docs":     "/docs",
+            "service": "Track 1 eICU Mortality Prediction",
+            "health": "/api/v1/track1/health",
+            "predict": "/api/v1/track1/predict",
+            "docs": "/docs",
         }
 
     return app

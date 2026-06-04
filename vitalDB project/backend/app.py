@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from api.vitaldb_router import router
+from backend.api.vitaldb_router import router
 
 app = FastAPI(
     title="Track 3 VitalDB API"

@@ -1,17 +1,18 @@
 from fastapi import APIRouter
 from datetime import datetime
 
-import os
+# import os
 import joblib
+from pathlib import Path
 import pandas as pd
 
-from api.feature_extractor import (
+from backend.api.feature_extractor import (
     segment_signals,
     extract_features,
     FEATURE_COLUMNS
 )
 
-from mlops.drift_detector import (
+from backend.mlops.drift_detector import (
     detect_drift
 )
 
@@ -21,56 +22,83 @@ router = APIRouter()
 # BASE DIRECTORY
 # ==========================================
 
-BASE_DIR = os.path.dirname(
-    os.path.dirname(__file__)
-)
+# BASE_DIR = os.path.dirname(
+#     os.path.dirname(__file__)
+# )
+BASE_DIR = Path(__file__).parent.parent
 
 # ==========================================
 # LOAD MODELS
 # ==========================================
 
+# hyp_model = joblib.load(
+#     os.path.join(
+#         BASE_DIR,
+#         "models",
+#         "hypotension",
+#         "best_model.pkl"
+#     )
+# )
+
 hyp_model = joblib.load(
-    os.path.join(
-        BASE_DIR,
-        "models",
-        "hypotension",
-        "best_model.pkl"
-    )
+    BASE_DIR / "models" / "hypotension" / "best_model.pkl"
 )
 
+# tach_model = joblib.load(
+#     os.path.join(
+#         BASE_DIR,
+#         "models",
+#         "tachycardia",
+#         "best_model.pkl"
+#     )
+# )
+
+# spo2_model = joblib.load(
+#     os.path.join(
+#         BASE_DIR,
+#         "models",
+#         "low_spo2",
+#         "best_model.pkl"
+#     )
+# )
+
 tach_model = joblib.load(
-    os.path.join(
-        BASE_DIR,
-        "models",
-        "tachycardia",
-        "best_model.pkl"
-    )
+    BASE_DIR / "models" / "tachycardia" / "best_model.pkl"
 )
 
 spo2_model = joblib.load(
-    os.path.join(
-        BASE_DIR,
-        "models",
-        "low_spo2",
-        "best_model.pkl"
-    )
+    BASE_DIR / "models" / "low_spo2" / "best_model.pkl"
 )
 
 # ==========================================
 # LOAD REFERENCE DATASET
 # ==========================================
 
+# reference_df = pd.read_csv(
+#     os.path.join(
+#         BASE_DIR,
+#         "reference_data",
+#         "vitaldb_advanced_features.csv"
+#     )
+# )
+
 reference_df = pd.read_csv(
-    os.path.join(
-        BASE_DIR,
-        "reference_data",
-        "vitaldb_advanced_features.csv"
-    )
+    BASE_DIR / "reference_data" / "vitaldb_advanced_features.csv"
 )
 
 reference_df = reference_df[
     FEATURE_COLUMNS
 ]
+
+# Health Router
+
+@router.get("/api/v1/track3/health")
+def health():
+    return {
+        "status": "healthy",
+        "service": "track3_vitaldb"
+    }
+
 
 # ==========================================
 # API ENDPOINT
@@ -219,19 +247,24 @@ def predict(payload: dict):
     # TELEMETRY LOGGING
     # ======================================
 
-    log_path = os.path.join(
+    # log_path = os.path.join(
 
-        BASE_DIR,
+    #     BASE_DIR,
 
-        "logs",
+    #     "logs",
 
-        "predictions.csv"
-    )
+    #     "predictions.csv"
+    # )
+    log_path = BASE_DIR / "logs" / "predictions.csv"
 
-    os.makedirs(
+    # os.makedirs(
 
-        os.path.dirname(log_path),
+    #     os.path.dirname(log_path),
 
+    #     exist_ok=True
+    # )
+    log_path.parent.mkdir(
+        parents=True,
         exist_ok=True
     )
 
@@ -256,7 +289,8 @@ def predict(payload: dict):
             risk_level
     }])
 
-    if not os.path.exists(log_path):
+    # if not os.path.exists(log_path):
+    if not log_path.exists():
 
         log_row.to_csv(
 

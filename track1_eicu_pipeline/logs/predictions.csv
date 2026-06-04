@@ -4,3 +4,4 @@ timestamp_utc,request_id,patient_id,observation_window_hours,mortality_probabili
 2026-06-03T08:57:36.672496+00:00,192f00cb-1056-4286-819d-dcc44a6d57c1,PT003,24,0.355,HIGH,2792.1,track3_random_forest_v1.0,lactate_min,0.02364,FiO2_max,0.02072,paCO2_std,0.01614
 2026-06-03T09:04:19.955524+00:00,17a6d99a-b6f7-4f8d-99d8-27ec8c9033da,PT001,24,0.36,HIGH,3017.61,track3_random_forest_v1.0,BUN_min,-0.01765,TV_max,0.0153,BUN_max,-0.01199
 2026-06-03T09:05:33.740657+00:00,96fdb8a4-3610-4603-a128-6d72c47782e4,PT002,24,0.345,HIGH,2518.37,track3_random_forest_v1.0,TV_max,0.01726,BUN_min,-0.01413,BUN_max,-0.01404
+2026-06-04T14:58:50.890263+00:00,00defb7a-cb1c-41ee-8f56-ec66b331b425,,24,0.37,HIGH,158.01,track1_random_forest_v1.0,BUN_min,-0.01615,TV_max,0.01577,BUN_max,-0.00974
