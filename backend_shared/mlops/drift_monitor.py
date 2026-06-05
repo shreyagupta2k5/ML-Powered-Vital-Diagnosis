@@ -169,7 +169,7 @@ TRACK_FEATURE_CONFIG = {
     },
     "track3_vitaldb": {
         "top_n": 10,
-        "shap_file": "track3_vitaldb_pipeline/models/shap_feature_importance.json",
+        "shap_file": "track3_vitalDB/backend/models/shap_feature_importance.json",
     },
 }
 

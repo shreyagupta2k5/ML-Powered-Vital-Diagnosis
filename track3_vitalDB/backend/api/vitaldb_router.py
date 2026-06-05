@@ -3,18 +3,16 @@ from datetime import datetime
 
 # import os
 import joblib
-from pathlib import Path
+import pathlib
 import pandas as pd
 
-from backend.api.feature_extractor import (
+from track3_vitalDB.backend.api.feature_extractor import (
     segment_signals,
     extract_features,
     FEATURE_COLUMNS
 )
 
-from backend.mlops.drift_detector import (
-    detect_drift
-)
+from track3_vitalDB.backend.mlops.drift_detector import detect_drift
 
 router = APIRouter()
 
@@ -22,45 +20,17 @@ router = APIRouter()
 # BASE DIRECTORY
 # ==========================================
 
-# BASE_DIR = os.path.dirname(
-#     os.path.dirname(__file__)
-# )
-BASE_DIR = Path(__file__).parent.parent
+# __file__ is .../track3_vitalDB/backend/api/vitaldb_router.py
+# .parent.parent points exactly to .../track3_vitalDB/backend/
+BASE_DIR = pathlib.Path(__file__).parent.parent
 
 # ==========================================
 # LOAD MODELS
 # ==========================================
 
-# hyp_model = joblib.load(
-#     os.path.join(
-#         BASE_DIR,
-#         "models",
-#         "hypotension",
-#         "best_model.pkl"
-#     )
-# )
-
 hyp_model = joblib.load(
     BASE_DIR / "models" / "hypotension" / "best_model.pkl"
 )
-
-# tach_model = joblib.load(
-#     os.path.join(
-#         BASE_DIR,
-#         "models",
-#         "tachycardia",
-#         "best_model.pkl"
-#     )
-# )
-
-# spo2_model = joblib.load(
-#     os.path.join(
-#         BASE_DIR,
-#         "models",
-#         "low_spo2",
-#         "best_model.pkl"
-#     )
-# )
 
 tach_model = joblib.load(
     BASE_DIR / "models" / "tachycardia" / "best_model.pkl"
@@ -73,14 +43,6 @@ spo2_model = joblib.load(
 # ==========================================
 # LOAD REFERENCE DATASET
 # ==========================================
-
-# reference_df = pd.read_csv(
-#     os.path.join(
-#         BASE_DIR,
-#         "reference_data",
-#         "vitaldb_advanced_features.csv"
-#     )
-# )
 
 reference_df = pd.read_csv(
     BASE_DIR / "reference_data" / "vitaldb_advanced_features.csv"
@@ -247,22 +209,8 @@ def predict(payload: dict):
     # TELEMETRY LOGGING
     # ======================================
 
-    # log_path = os.path.join(
-
-    #     BASE_DIR,
-
-    #     "logs",
-
-    #     "predictions.csv"
-    # )
     log_path = BASE_DIR / "logs" / "predictions.csv"
 
-    # os.makedirs(
-
-    #     os.path.dirname(log_path),
-
-    #     exist_ok=True
-    # )
     log_path.parent.mkdir(
         parents=True,
         exist_ok=True
@@ -289,7 +237,6 @@ def predict(payload: dict):
             risk_level
     }])
 
-    # if not os.path.exists(log_path):
     if not log_path.exists():
 
         log_row.to_csv(

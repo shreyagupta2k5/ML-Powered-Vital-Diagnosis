@@ -34,7 +34,8 @@ else:
     print("Track2: api_inference_logs.csv not found — skipping")
 
 # Track 3
-files = glob.glob('vitalDB project/data/windowed/**/*.csv', recursive=True)
+# files = glob.glob('vitalDB project/data/windowed/**/*.csv', recursive=True)
+files = glob.glob('track3_vitalDB/data/windowed/**/*.csv', recursive=True)
 if files:
     dfs = [pd.read_csv(f) for f in files[:100]]
     df = pd.concat(dfs, ignore_index=True).select_dtypes(include='number')

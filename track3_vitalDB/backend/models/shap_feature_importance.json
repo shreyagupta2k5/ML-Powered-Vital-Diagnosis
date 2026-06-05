@@ -1,0 +1,23 @@
+{
+    "mean_hr": 1.0,
+    "std_hr": 1.0,
+    "min_hr": 1.0,
+    "max_hr": 1.0,
+    "mean_map": 1.0,
+    "std_map": 1.0,
+    "min_map": 1.0,
+    "max_map": 1.0,
+    "map_range": 1.0,
+    "mean_spo2": 1.0,
+    "std_spo2": 1.0,
+    "min_spo2": 1.0,
+    "mean_ecg": 1.0,
+    "std_ecg": 1.0,
+    "min_ecg": 1.0,
+    "max_ecg": 1.0,
+    "map_variability": 1.0,
+    "hr_variability": 1.0,
+    "ecg_range": 1.0,
+    "map_drop": 1.0,
+    "spo2_drop": 1.0
+}

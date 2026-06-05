@@ -19,8 +19,7 @@ def _find_project_root() -> pathlib.Path:
     markers = {
         "track1_eicu_pipeline",
         "track2_multimorbidity",
-        "track3_vitaldb_pipeline",
-        "vitalDB project",
+        "track3_vitalDB",
         "backend_shared",
     }
     candidate = _THIS_FILE.parent
@@ -117,7 +116,7 @@ def _load_artifact(artifact_path: str) -> Any:
 
 def _load_track3_ensemble(artifact_dir: str) -> Dict[str, Any]:
     """
-    Track 3 structure (vitalDB project/backend/models/):
+   Track 3 structure (track3_vitalDB/backend/models/):
       hypotension/   -> best_model.pkl + scaler.pkl
       low_spo2/      -> best_model.pkl + scaler.pkl
       tachycardia/   -> best_model.pkl + scaler.pkl
