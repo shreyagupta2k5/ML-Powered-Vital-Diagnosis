@@ -4,13 +4,15 @@
 # Objective: Implement audit-compliant logging for inference requests.
 #            Logs de-identified feature vectors, predictions, and metadata
 #            to support drift detection and model performance monitoring.
+#            Updated: Cross-platform file locking using portalocker.
 # ==========================================
 
 import csv
 import json
 import pathlib
-import fcntl
-import numpy as np  # Added: Required for numpy type checking in sanitization
+import threading
+import portalocker  # Cross-platform file locking (replaces fcntl/msvcrt)
+import numpy as np
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Union
 import warnings
@@ -19,8 +21,8 @@ warnings.filterwarnings('ignore')
 
 class TelemetryLogger:
     """
-    Thread-safe logger for inference telemetry.
-    Appends de-identified records to CSV with file locking for concurrent safety.
+    Thread-safe and process-safe logger for inference telemetry.
+    Appends de-identified records to CSV with cross-platform file locking.
     """
     
     # CSV column schema - fixed order for consistency
@@ -50,6 +52,9 @@ class TelemetryLogger:
         self.log_dir = pathlib.Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.log_path = self.log_dir / log_filename
+        
+        # Thread lock for intra-process safety
+        self._thread_lock = threading.Lock()
         self._initialize_log_file()
     
     def _initialize_log_file(self):
@@ -61,24 +66,20 @@ class TelemetryLogger:
     
     def _acquire_lock(self, file_handle) -> bool:
         """
-        Acquire exclusive file lock for writing.
-        
-        Args:
-            file_handle: Open file object
-            
-        Returns:
-            True if lock acquired, False otherwise
+        Acquire exclusive file lock for writing using portalocker.
+        Works seamlessly on Windows, macOS, and Linux.
         """
         try:
-            fcntl.flock(file_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # LOCK_EX = Exclusive lock, LOCK_NB = Non-blocking
+            portalocker.lock(file_handle, portalocker.LOCK_EX | portalocker.LOCK_NB)
             return True
-        except (IOError, OSError):
+        except (portalocker.LockException, IOError, OSError):
             return False
     
     def _release_lock(self, file_handle):
         """Release file lock."""
         try:
-            fcntl.flock(file_handle.fileno(), fcntl.LOCK_UN)
+            portalocker.unlock(file_handle)
         except (IOError, OSError):
             pass
     
@@ -86,12 +87,6 @@ class TelemetryLogger:
         """
         Ensure record contains only de-identified, schema-compliant fields.
         Removes any potential PHI or unexpected keys.
-        
-        Args:
-            record: Raw record dictionary
-            
-        Returns:
-            Sanitized record with only allowed columns
         """
         sanitized = {}
         for col in self.LOG_COLUMNS:
@@ -116,17 +111,6 @@ class TelemetryLogger:
     ) -> Dict[str, Union[bool, str]]:
         """
         Log a single inference request and response.
-        
-        Args:
-            features: Preprocessed feature vector sent to model
-            prediction: Model output dict with crisis_probability, severity_level, crisis_type
-            request_id: Unique identifier for this inference request
-            model_version: Version string of the model used
-            inference_latency_ms: Time taken for inference in milliseconds
-            drift_psi_score: Optional PSI score indicating data drift
-            
-        Returns:
-            Dict with success status and message
         """
         # Build log record with timezone-aware UTC timestamp
         record = {
@@ -162,32 +146,25 @@ class TelemetryLogger:
         # Sanitize to ensure only allowed columns are written
         sanitized = self._sanitize_record(record)
         
-        # Write with file locking for concurrent safety
-        try:
-            with open(self.log_path, 'a', newline='', encoding='utf-8') as f:
-                if not self._acquire_lock(f):
-                    return {'success': False, 'error': 'Could not acquire file lock'}
-                
-                try:
-                    writer = csv.DictWriter(f, fieldnames=self.LOG_COLUMNS)
-                    writer.writerow(sanitized)
-                    return {'success': True, 'message': 'Record logged successfully'}
-                finally:
-                    self._release_lock(f)
+        # Write with thread lock (intra-process) and file lock (inter-process)
+        with self._thread_lock:
+            try:
+                with open(self.log_path, 'a', newline='', encoding='utf-8') as f:
+                    if not self._acquire_lock(f):
+                        return {'success': False, 'error': 'Could not acquire file lock'}
                     
-        except Exception as e:
-            return {'success': False, 'error': f'Logging error: {str(e)}'}
+                    try:
+                        writer = csv.DictWriter(f, fieldnames=self.LOG_COLUMNS)
+                        writer.writerow(sanitized)
+                        return {'success': True, 'message': 'Record logged successfully'}
+                    finally:
+                        self._release_lock(f)
+                        
+            except Exception as e:
+                return {'success': False, 'error': f'Logging error: {str(e)}'}
     
     def get_recent_logs(self, n: int = 100) -> List[Dict]:
-        """
-        Retrieve the most recent n log entries for inspection.
-        
-        Args:
-            n: Number of recent entries to return
-            
-        Returns:
-            List of dictionaries representing log records
-        """
+        """Retrieve the most recent n log entries for inspection."""
         if not self.log_path.exists():
             return []
         
@@ -200,18 +177,12 @@ class TelemetryLogger:
         return records[-n:] if len(records) > n else records
     
     def get_log_stats(self) -> Dict[str, Union[int, str]]:
-        """
-        Get basic statistics about the log file.
-        
-        Returns:
-            Dict with file size, record count, and last update time
-        """
+        """Get basic statistics about the log file."""
         if not self.log_path.exists():
             return {'record_count': 0, 'file_size_bytes': 0, 'last_updated': None}
         
         stats = self.log_path.stat()
         with open(self.log_path, 'r', encoding='utf-8') as f:
-            # Count data rows (excluding header)
             record_count = sum(1 for _ in f) - 1
         
         return {
@@ -228,10 +199,8 @@ class TelemetryLogger:
 def run_unit_tests():
     """Execute unit tests for telemetry logging functionality."""
     import tempfile
-    import os
     
     print("Running unit tests for telemetry_logger module...")
-    
     results = {'passed': 0, 'failed': 0, 'details': []}
     
     # Test 1: Initialize logger and verify header creation
@@ -262,19 +231,8 @@ def run_unit_tests():
             'map_std': 8.0, 'map_cv': 0.09, 'map_count': 50,
             'los': 4.2
         }
-        prediction = {
-            'crisis_probability': 0.35,
-            'severity_level': 'MODERATE',
-            'crisis_type': 'isolated_glucose'
-        }
-        result = logger.log_inference(
-            features=features,
-            prediction=prediction,
-            request_id='test_req_001',
-            model_version='v1.0.0',
-            inference_latency_ms=45.2,
-            drift_psi_score=0.08
-        )
+        prediction = {'crisis_probability': 0.35, 'severity_level': 'MODERATE', 'crisis_type': 'isolated_glucose'}
+        result = logger.log_inference(features, prediction, 'test_req_001', 'v1.0.0', 45.2, drift_psi_score=0.08)
         if result['success']:
             results['passed'] += 1
             results['details'].append("Test 2 PASSED: Single inference record logged")
@@ -290,8 +248,7 @@ def run_unit_tests():
                    'sbp_mean': 115.0, 'sbp_min': 95.0, 'sbp_max': 135.0,
                    'sbp_std': 9.0, 'sbp_cv': 0.08, 'sbp_count': 40,
                    'map_mean': 88.0, 'map_min': 72.0, 'map_max': 102.0,
-                   'map_std': 7.0, 'map_cv': 0.08, 'map_count': 40,
-                   'los': 3.5}
+                   'map_std': 7.0, 'map_cv': 0.08, 'map_count': 40, 'los': 3.5}
         prediction = {'crisis_probability': 0.12, 'severity_level': 'LOW', 'crisis_type': 'none'}
         logger.log_inference(features, prediction, 'test_req_002', 'v1.0.0', 38.7)
         
@@ -312,7 +269,7 @@ def run_unit_tests():
                    'sbp_std': 9.5, 'sbp_cv': 0.08, 'sbp_count': 45,
                    'map_mean': 89.0, 'map_min': 73.0, 'map_max': 103.0,
                    'map_std': 7.5, 'map_cv': 0.08, 'map_count': 45,
-                   'los': 3.8, 'patient_name': 'REDACTED'}  # Unexpected field
+                   'los': 3.8, 'patient_name': 'REDACTED'}
         prediction = {'crisis_probability': 0.25, 'severity_level': 'LOW', 'crisis_type': 'none'}
         logger.log_inference(features, prediction, 'test_req_003', 'v1.0.0', 42.1)
         
