@@ -13,6 +13,7 @@ import pathlib
 from datetime import datetime, timezone
 from ..services.aggregator import EnsembleAggregator
 from ..services.risk_scorer import RiskScorer
+import os
 
 # ── Registry & Drift imports (Tasks 3.2 & 3.3) ───────────────────────────────
 from backend_shared.registry.model_registry import (
@@ -30,9 +31,14 @@ drift_router = APIRouter(prefix="/api/v1/drift", tags=["Drift Monitor"])
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config" / "weights.json"
 
 # Track API endpoints (configured via environment or defaults)
-TRACK1_URL = "http://localhost:8001/api/v1/track1/predict"
-TRACK2_URL = "http://localhost:8002/api/v1/track2/predict"
-TRACK3_URL = "http://localhost:8003/api/v1/track3/predict"
+# TRACK1_URL = "http://localhost:8001/api/v1/track1/predict"
+# TRACK2_URL = "http://localhost:8002/api/v1/track2/predict"
+# TRACK3_URL = "http://localhost:8003/api/v1/track3/predict"
+
+# Unified backend URLs (all point to the main app on port 8000)
+TRACK1_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
+TRACK2_URL = f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/predict"
+TRACK3_URL = f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/predict"
 
 # Initialize aggregator
 aggregator = EnsembleAggregator(CONFIG_PATH)
@@ -190,19 +196,19 @@ async def predict_ensemble(
     )
 
 
-@router.post("/predict/track1", tags=["Individual Tracks"])
+@router.post("/predict/track1")
 async def predict_track1(payload: Dict):
     """Route prediction to Track 1 (VitalDB waveforms) only."""
     return await _call_track_api(TRACK1_URL, payload, "track1_waveform")
 
 
-@router.post("/predict/track2", tags=["Individual Tracks"])
+@router.post("/predict/track2")
 async def predict_track2(payload: Dict):
     """Route prediction to Track 2 (MIMIC+Pima) only."""
     return await _call_track_api(TRACK2_URL, payload, "track2_multimorbidity")
 
 
-@router.post("/predict/track3", tags=["Individual Tracks"])
+@router.post("/predict/track3")
 async def predict_track3(payload: Dict):
     """Route prediction to Track 3 (eICU mortality) only."""
     return await _call_track_api(TRACK3_URL, payload, "track3_mortality")
@@ -217,9 +223,9 @@ async def ensemble_health():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
     for name, url in [
-        ("track1", TRACK1_URL.replace("/predict", "/health")),
-        ("track2", TRACK2_URL.replace("/predict", "/health")),
-        ("track3", TRACK3_URL.replace("/predict", "/health"))
+        ("track1", f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/health"),
+        ("track2", f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/health"),
+        ("track3", f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/health"),
     ]:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
