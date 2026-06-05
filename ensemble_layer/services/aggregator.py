@@ -34,31 +34,42 @@ class EnsembleAggregator:
             }
     
     def _get_track_probability(self, track_name: str, track_output: Dict) -> float:
-        """Extract probability score from track output."""
+        """Extract probability score from track output, handling different structures."""
         if track_name == "track1_waveform":
-            # Track 1: Max of 3 binary probs
+            # VitalDB router returns flat keys
             return max(
-                track_output.get("hypotension", {}).get("probability", 0.0),
-                track_output.get("tachycardia", {}).get("probability", 0.0),
-                track_output.get("oxygen_desaturation", {}).get("probability", 0.0)
+                track_output.get("hypotension_probability", 0.0),
+                track_output.get("tachycardia_probability", 0.0),
+                track_output.get("low_spo2_probability", 0.0)
             )
         elif track_name == "track2_multimorbidity":
             return track_output.get("crisis_probability", 0.0)
         elif track_name == "track3_mortality":
             return track_output.get("mortality_probability", 0.0)
         return 0.0
-    
+
+
     def _get_track_risk_type(self, track_name: str, track_output: Dict) -> str:
         """Extract human-readable risk description."""
         if track_name == "track1_waveform":
-            if track_output.get("oxygen_desaturation", {}).get("probability", 0) > 0.7: return "SpO2 Desaturation"
-            if track_output.get("hypotension", {}).get("probability", 0) > 0.7: return "Hypotension"
-            if track_output.get("tachycardia", {}).get("probability", 0) > 0.7: return "Tachycardia"
+            # VitalDB router returns flat keys
+            if track_output.get("low_spo2_probability", 0) > 0.7:
+                return "SpO2 Desaturation"
+
+            if track_output.get("hypotension_probability", 0) > 0.7:
+                return "Hypotension"
+
+            if track_output.get("tachycardia_probability", 0) > 0.7:
+                return "Tachycardia"
+
             return "Waveform Instability"
+
         elif track_name == "track2_multimorbidity":
             return track_output.get("severity_label", "Multimorbidity Crisis")
+
         elif track_name == "track3_mortality":
             return track_output.get("risk_tier", "Mortality Risk") + " Mortality"
+
         return "Unknown Risk"
 
     def aggregate(

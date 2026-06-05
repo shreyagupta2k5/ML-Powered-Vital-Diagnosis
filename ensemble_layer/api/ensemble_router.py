@@ -36,9 +36,23 @@ CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config" / "weights.json"
 # TRACK3_URL = "http://localhost:8003/api/v1/track3/predict"
 
 # Unified backend URLs (all point to the main app on port 8000)
-TRACK1_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
-TRACK2_URL = f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/predict"
-TRACK3_URL = f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/predict"
+# TRACK1_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
+# TRACK2_URL = f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/predict"
+# TRACK3_URL = f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/predict"
+
+# =============================================================================
+# CORRECTED URL MAPPING
+# Map Pydantic fields to the ACTUAL project endpoints
+# =============================================================================
+
+# Pydantic field: track1_features (VitalDB data) -> Actual endpoint: Track 3 (VitalDB)
+VITALDB_URL = f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/predict"
+
+# Pydantic field: track2_features (MIMIC data) -> Actual endpoint: Track 2 (MIMIC)
+MIMIC_URL = f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/predict"
+
+# Pydantic field: track3_features (eICU data) -> Actual endpoint: Track 1 (eICU)
+EICU_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
 
 # Initialize aggregator
 aggregator = EnsembleAggregator(CONFIG_PATH)
@@ -100,10 +114,11 @@ async def predict_ensemble(
     background_tasks: BackgroundTasks
 ):
     """
-    **Main ensemble endpoint** — Calls all 3 tracks and returns unified risk assessment.
+    Main ensemble endpoint.
+    Routes Pydantic inputs to the correct backend track services.
     """
     start_time = asyncio.get_event_loop().time()
-    
+
     if not any([
         request.track1_signals or request.track1_features,
         request.track2_features,
@@ -113,37 +128,76 @@ async def predict_ensemble(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="At least one track's input data must be provided"
         )
-    
+
     track_tasks = []
     track_names = []
-    
+
+    # -------------------------------------------------------------------------
+    # 1. VitalDB data (Pydantic: track1_signals/track1_features)
+    #    -> Actual backend Track 3
+    # -------------------------------------------------------------------------
     if request.track1_signals or request.track1_features:
-        track1_payload = {}
+        vitaldb_payload = {}
+
         if request.track1_signals:
-            track1_payload["signals"] = request.track1_signals
+            vitaldb_payload["signals"] = request.track1_signals
+
         if request.track1_features:
-            track1_payload["features"] = request.track1_features
+            vitaldb_payload["features"] = request.track1_features
+
         if request.patient_id:
-            track1_payload["patient_id"] = request.patient_id
-        track_tasks.append(_call_track_api(TRACK1_URL, track1_payload, "track1_waveform"))
+            vitaldb_payload["patient_id"] = request.patient_id
+
+        track_tasks.append(
+            _call_track_api(
+                VITALDB_URL,
+                vitaldb_payload,
+                "track1_waveform"
+            )
+        )
         track_names.append("track1_waveform")
-    
+
+    # -------------------------------------------------------------------------
+    # 2. MIMIC data (Pydantic: track2_features)
+    #    -> Actual backend Track 2
+    # -------------------------------------------------------------------------
     if request.track2_features:
-        track2_payload = request.track2_features.copy()
+        mimic_payload = request.track2_features.copy()
+
         if request.patient_id:
-            track2_payload["patient_id"] = request.patient_id
-        track_tasks.append(_call_track_api(TRACK2_URL, track2_payload, "track2_multimorbidity"))
+            mimic_payload["patient_id"] = request.patient_id
+
+        track_tasks.append(
+            _call_track_api(
+                MIMIC_URL,
+                mimic_payload,
+                "track2_multimorbidity"
+            )
+        )
         track_names.append("track2_multimorbidity")
-    
+
+    # -------------------------------------------------------------------------
+    # 3. eICU data (Pydantic: track3_features)
+    #    -> Actual backend Track 1
+    # -------------------------------------------------------------------------
     if request.track3_features:
-        track3_payload = {"features": request.track3_features}
+        eicu_payload = request.track3_features.copy()
+
         if request.patient_id:
-            track3_payload["patient_id"] = request.patient_id
+            eicu_payload["patient_id"] = request.patient_id
+
         if request.timestamp:
-            track3_payload["observation_window_hours"] = 24
-        track_tasks.append(_call_track_api(TRACK3_URL, track3_payload, "track3_mortality"))
+            eicu_payload["observation_window_hours"] = 24
+
+        track_tasks.append(
+            _call_track_api(
+                EICU_URL,
+                eicu_payload,
+                "track3_mortality"
+            )
+        )
         track_names.append("track3_mortality")
-    
+
     try:
         results = await asyncio.gather(*track_tasks, return_exceptions=True)
     except Exception as e:
@@ -151,8 +205,9 @@ async def predict_ensemble(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"One or more track services unavailable: {str(e)}"
         )
-    
+
     track_outputs = {}
+
     for name, result in zip(track_names, results):
         if isinstance(result, Exception):
             raise HTTPException(
@@ -160,7 +215,7 @@ async def predict_ensemble(
                 detail=f"{name} service failed: {str(result)}"
             )
         track_outputs[name] = result
-    
+
     try:
         ensemble_result = aggregator.aggregate(
             track1_output=track_outputs.get("track1_waveform", {}),
@@ -172,17 +227,29 @@ async def predict_ensemble(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ensemble aggregation failed: {str(e)}"
         )
-    
+
     processing_time_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-    
+
     model_versions = {}
+
     if "track1_waveform" in track_outputs:
-        model_versions["track1"] = track_outputs["track1_waveform"].get("model_used", "unknown")
+        model_versions["track1"] = track_outputs["track1_waveform"].get(
+            "model_used",
+            "unknown"
+        )
+
     if "track2_multimorbidity" in track_outputs:
-        model_versions["track2"] = track_outputs["track2_multimorbidity"].get("model_version", "unknown")
+        model_versions["track2"] = track_outputs["track2_multimorbidity"].get(
+            "model_version",
+            "unknown"
+        )
+
     if "track3_mortality" in track_outputs:
-        model_versions["track3"] = track_outputs["track3_mortality"].get("model_version", "unknown")
-    
+        model_versions["track3"] = track_outputs["track3_mortality"].get(
+            "model_version",
+            "unknown"
+        )
+
     return EnsemblePredictResponse(
         patient_id=request.patient_id,
         timestamp=request.timestamp or datetime.now(timezone.utc).isoformat(),
@@ -198,20 +265,17 @@ async def predict_ensemble(
 
 @router.post("/predict/track1")
 async def predict_track1(payload: Dict):
-    """Route prediction to Track 1 (VitalDB waveforms) only."""
-    return await _call_track_api(TRACK1_URL, payload, "track1_waveform")
+    return await _call_track_api(VITALDB_URL, payload, "track1_waveform")
 
 
 @router.post("/predict/track2")
 async def predict_track2(payload: Dict):
-    """Route prediction to Track 2 (MIMIC+Pima) only."""
-    return await _call_track_api(TRACK2_URL, payload, "track2_multimorbidity")
+    return await _call_track_api(MIMIC_URL, payload, "track2_multimorbidity")
 
 
 @router.post("/predict/track3")
 async def predict_track3(payload: Dict):
-    """Route prediction to Track 3 (eICU mortality) only."""
-    return await _call_track_api(TRACK3_URL, payload, "track3_mortality")
+    return await _call_track_api(EICU_URL, payload, "track3_mortality")
 
 
 @router.get("/health")
@@ -222,11 +286,12 @@ async def ensemble_health():
         "tracks": {},
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
-    for name, url in [
-        ("track1", f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/health"),
-        ("track2", f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/health"),
-        ("track3", f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/health"),
-    ]:
+    track_urls = {
+    "track1_eicu": f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/health",
+    "track2_multimorbidity": f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/health",
+    "track3_vitaldb": f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/health",
+    }
+    for name, url in track_urls.items():
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
@@ -236,7 +301,6 @@ async def ensemble_health():
         except Exception:
             health_status["tracks"][name] = "unreachable"
     return health_status
-
 
 # ============================================================================
 # REGISTRY ENDPOINTS (Task 3.3)
