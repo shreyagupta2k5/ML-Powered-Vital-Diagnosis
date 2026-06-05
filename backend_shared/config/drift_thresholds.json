@@ -1,0 +1,28 @@
+{
+  "global": {
+    "psi_warning": 0.10,
+    "psi_alert": 0.25,
+    "psi_critical": 0.50,
+    "ks_p_value_threshold": 0.05,
+    "min_features_for_alert": 3,
+    "run_interval_minutes": 10
+  },
+  "track1_eicu": {
+    "top_n_features": 50,
+    "psi_alert": 0.25,
+    "psi_critical": 0.50,
+    "min_features_for_alert": 3
+  },
+  "track2_multimorbidity": {
+    "top_n_features": 6,
+    "psi_alert": 0.25,
+    "psi_critical": 0.50,
+    "min_features_for_alert": 2
+  },
+  "track3_vitaldb": {
+    "top_n_features": 10,
+    "psi_alert": 0.25,
+    "psi_critical": 0.50,
+    "min_features_for_alert": 2
+  }
+}

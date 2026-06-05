@@ -14,7 +14,17 @@ from datetime import datetime, timezone
 from ..services.aggregator import EnsembleAggregator
 from ..services.risk_scorer import RiskScorer
 
+# ── Registry & Drift imports (Tasks 3.2 & 3.3) ───────────────────────────────
+from backend_shared.registry.model_registry import (
+    list_versions, get_active_version, register_model, promote_to_active
+)
+from backend_shared.registry.model_loader import hot_swap, list_loaded
+from backend_shared.mlops.retrain_trigger import run_drift_cycle
+from backend_shared.mlops.drift_monitor import check_drift_for_track
+
 router = APIRouter(prefix="/api/v1/ensemble", tags=["Ensemble Layer"])
+registry_router = APIRouter(prefix="/api/v1/registry", tags=["Model Registry"])
+drift_router = APIRouter(prefix="/api/v1/drift", tags=["Drift Monitor"])
 
 # Configuration
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config" / "weights.json"
@@ -65,7 +75,7 @@ class EnsemblePredictResponse(BaseModel):
     """Phase 7 compliant unified ensemble output."""
     patient_id: Optional[str]
     timestamp: str
-    overall_risk: Literal["HIGH", "MODERATE", "LOW"]
+    overall_risk: Literal["CRITICAL", "HIGH", "MODERATE", "LOW"]  # fixed: added CRITICAL
     risk_score: float = Field(..., ge=0.0, le=1.0)
     track_results: Dict[str, Dict]
     unified_alert: str
@@ -73,8 +83,9 @@ class EnsemblePredictResponse(BaseModel):
     model_versions: Dict[str, str]
     processing_time_ms: float
 
+
 # ============================================================================
-# ENDPOINTS
+# ENSEMBLE ENDPOINTS (unchanged)
 # ============================================================================
 
 @router.post("/predict", response_model=EnsemblePredictResponse, status_code=status.HTTP_200_OK)
@@ -84,19 +95,9 @@ async def predict_ensemble(
 ):
     """
     **Main ensemble endpoint** — Calls all 3 tracks and returns unified risk assessment.
-    
-    This endpoint:
-    1. Validates input contains at least one track's data
-    2. Makes async HTTP calls to individual track APIs
-    3. Aggregates results using weighted fusion
-    4. Returns Phase 7 compliant JSON
-    
-    **Input:** Combined patient data (waveforms, features, or both)
-    **Output:** Unified risk score, tier, alerts, and track-specific results
     """
     start_time = asyncio.get_event_loop().time()
     
-    # Validate at least one track has data
     if not any([
         request.track1_signals or request.track1_features,
         request.track2_features,
@@ -107,11 +108,9 @@ async def predict_ensemble(
             detail="At least one track's input data must be provided"
         )
     
-    # Prepare track-specific requests
     track_tasks = []
     track_names = []
     
-    # Track 1 request
     if request.track1_signals or request.track1_features:
         track1_payload = {}
         if request.track1_signals:
@@ -120,31 +119,25 @@ async def predict_ensemble(
             track1_payload["features"] = request.track1_features
         if request.patient_id:
             track1_payload["patient_id"] = request.patient_id
-        
         track_tasks.append(_call_track_api(TRACK1_URL, track1_payload, "track1_waveform"))
         track_names.append("track1_waveform")
     
-    # Track 2 request
     if request.track2_features:
         track2_payload = request.track2_features.copy()
         if request.patient_id:
             track2_payload["patient_id"] = request.patient_id
-        
         track_tasks.append(_call_track_api(TRACK2_URL, track2_payload, "track2_multimorbidity"))
         track_names.append("track2_multimorbidity")
     
-    # Track 3 request
     if request.track3_features:
         track3_payload = {"features": request.track3_features}
         if request.patient_id:
             track3_payload["patient_id"] = request.patient_id
         if request.timestamp:
-            track3_payload["observation_window_hours"] = 24  # Default
-        
+            track3_payload["observation_window_hours"] = 24
         track_tasks.append(_call_track_api(TRACK3_URL, track3_payload, "track3_mortality"))
         track_names.append("track3_mortality")
     
-    # Execute all track predictions concurrently
     try:
         results = await asyncio.gather(*track_tasks, return_exceptions=True)
     except Exception as e:
@@ -153,9 +146,8 @@ async def predict_ensemble(
             detail=f"One or more track services unavailable: {str(e)}"
         )
     
-    # Check for errors in results
     track_outputs = {}
-    for i, (name, result) in enumerate(zip(track_names, results)):
+    for name, result in zip(track_names, results):
         if isinstance(result, Exception):
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -163,7 +155,6 @@ async def predict_ensemble(
             )
         track_outputs[name] = result
     
-    # Aggregate results
     try:
         ensemble_result = aggregator.aggregate(
             track1_output=track_outputs.get("track1_waveform", {}),
@@ -176,10 +167,8 @@ async def predict_ensemble(
             detail=f"Ensemble aggregation failed: {str(e)}"
         )
     
-    # Calculate processing time
     processing_time_ms = (asyncio.get_event_loop().time() - start_time) * 1000
     
-    # Extract model versions from track responses
     model_versions = {}
     if "track1_waveform" in track_outputs:
         model_versions["track1"] = track_outputs["track1_waveform"].get("model_used", "unknown")
@@ -188,7 +177,6 @@ async def predict_ensemble(
     if "track3_mortality" in track_outputs:
         model_versions["track3"] = track_outputs["track3_mortality"].get("model_version", "unknown")
     
-    # Build response
     return EnsemblePredictResponse(
         patient_id=request.patient_id,
         timestamp=request.timestamp or datetime.now(timezone.utc).isoformat(),
@@ -201,20 +189,24 @@ async def predict_ensemble(
         processing_time_ms=round(processing_time_ms, 2)
     )
 
+
 @router.post("/predict/track1", tags=["Individual Tracks"])
 async def predict_track1(payload: Dict):
     """Route prediction to Track 1 (VitalDB waveforms) only."""
     return await _call_track_api(TRACK1_URL, payload, "track1_waveform")
+
 
 @router.post("/predict/track2", tags=["Individual Tracks"])
 async def predict_track2(payload: Dict):
     """Route prediction to Track 2 (MIMIC+Pima) only."""
     return await _call_track_api(TRACK2_URL, payload, "track2_multimorbidity")
 
+
 @router.post("/predict/track3", tags=["Individual Tracks"])
 async def predict_track3(payload: Dict):
     """Route prediction to Track 3 (eICU mortality) only."""
     return await _call_track_api(TRACK3_URL, payload, "track3_mortality")
+
 
 @router.get("/health")
 async def ensemble_health():
@@ -224,11 +216,11 @@ async def ensemble_health():
         "tracks": {},
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
-    
-    # Check each track
-    for name, url in [("track1", TRACK1_URL.replace("/predict", "/health")),
-                      ("track2", TRACK2_URL.replace("/predict", "/health")),
-                      ("track3", TRACK3_URL.replace("/predict", "/health"))]:
+    for name, url in [
+        ("track1", TRACK1_URL.replace("/predict", "/health")),
+        ("track2", TRACK2_URL.replace("/predict", "/health")),
+        ("track3", TRACK3_URL.replace("/predict", "/health"))
+    ]:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
@@ -237,28 +229,112 @@ async def ensemble_health():
                 )
         except Exception:
             health_status["tracks"][name] = "unreachable"
-    
     return health_status
+
+
+# ============================================================================
+# REGISTRY ENDPOINTS (Task 3.3)
+# ============================================================================
+
+@registry_router.get("/loaded")
+def get_loaded():
+    """List which tracks have models loaded in memory."""
+    return {"loaded": list_loaded()}
+
+
+@registry_router.get("/{track_id}/active")
+def get_active(track_id: str):
+    """Return the active model version metadata for a track."""
+    meta = get_active_version(track_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail=f"No active version for {track_id}")
+    return meta
+
+
+@registry_router.get("/{track_id}/versions")
+def get_versions(track_id: str):
+    """List all registered versions for a track."""
+    return {"track_id": track_id, "versions": list_versions(track_id)}
+
+
+class RegisterRequest(BaseModel):
+    version: str
+    model_type: str
+    artifact_path: str
+    performance_metrics: Optional[dict] = None
+    notes: Optional[str] = None
+    status: str = "staging"
+
+
+@registry_router.post("/{track_id}/register")
+def register(track_id: str, body: RegisterRequest):
+    """Register a new model version (staging by default)."""
+    record_id = register_model(
+        track_id=track_id,
+        version=body.version,
+        model_type=body.model_type,
+        artifact_path=body.artifact_path,
+        performance_metrics=body.performance_metrics,
+        notes=body.notes,
+        status=body.status,
+    )
+    return {"status": "registered", "id": record_id}
+
+
+@registry_router.post("/{track_id}/promote/{version}")
+def promote(track_id: str, version: str):
+    """Promote a staging version to active (archives current active)."""
+    success = promote_to_active(track_id, version)
+    if not success:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return {"status": "promoted", "track_id": track_id, "version": version}
+
+
+class HotSwapRequest(BaseModel):
+    version: str
+
+
+@registry_router.post("/{track_id}/hot-swap")
+def hot_swap_model(track_id: str, body: HotSwapRequest):
+    """Hot-swap a track to a new model version without API restart."""
+    success = hot_swap(track_id, body.version)
+    if not success:
+        raise HTTPException(status_code=500, detail="Hot-swap failed — check logs")
+    return {"status": "swapped", "track_id": track_id, "new_version": body.version}
+
+
+# ============================================================================
+# DRIFT ENDPOINTS (Task 3.2)
+# ============================================================================
+
+@drift_router.post("/run")
+def trigger_drift_check():
+    """Manually trigger a full drift detection cycle across all tracks."""
+    reports = run_drift_cycle(window_minutes=60)
+    summary = {
+        t: {
+            "status": r.get("status"),
+            "alert": r.get("alert"),
+            "retrain_trigger": r.get("retrain_trigger"),
+            "max_psi": r.get("max_psi"),
+            "features_drifted": r.get("features_drifted"),
+        }
+        for t, r in (reports or {}).items()
+    }
+    return {"summary": summary}
+
+
+@drift_router.get("/{track_id}")
+def drift_status(track_id: str):
+    """Run and return drift check report for a single track."""
+    return check_drift_for_track(track_id)
+
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
 async def _call_track_api(url: str, payload: Dict, track_name: str) -> Dict:
-    """
-    Make async HTTP call to individual track API.
-    
-    Args:
-        url: Track API endpoint URL
-        payload: Request payload
-        track_name: Name for error reporting
-    
-    Returns:
-        Track API response as dict
-    
-    Raises:
-        HTTPException: If track service unavailable
-    """
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=payload)
