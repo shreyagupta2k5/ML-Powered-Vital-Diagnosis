@@ -7,12 +7,17 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend_main.auth_router import router as auth_router
 import warnings
-from sklearn.exceptions import InconsistentVersionWarning
+
+from sklearn.exceptions import (
+    InconsistentVersionWarning
+)
 
 warnings.filterwarnings(
     "ignore",
     category=InconsistentVersionWarning
 )
+
+import joblib
 
 from backend_main.config import settings
 from backend_main.dependencies import rate_limit_default
@@ -26,6 +31,8 @@ from ensemble_layer.api.ensemble_router import (
     registry_router,
     drift_router
 )
+
+from backend_main.websockets.alert_stream import router as websocket_router
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -92,6 +99,7 @@ app.include_router(ensemble_router)
 app.include_router(registry_router)
 app.include_router(drift_router)
 app.include_router(auth_router)
+app.include_router(websocket_router)
 
 # =============================================================================
 # CORE ENDPOINTS
