@@ -14,7 +14,8 @@ from track3_vitalDB.backend.api.feature_extractor import (
 
 from track3_vitalDB.backend.mlops.drift_detector import detect_drift
 
-router = APIRouter()
+# router = APIRouter()
+router = APIRouter(tags=["Track 3 — VitalDB Waveforms"])
 
 # ==========================================
 # BASE DIRECTORY

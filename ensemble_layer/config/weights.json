@@ -1,15 +1,16 @@
 {
   "track_weights": {
-    "track1_waveform": 0.25,
+    "track1_eicu": 0.45,
     "track2_multimorbidity": 0.30,
-    "track3_mortality": 0.45
+    "track3_vitaldb": 0.25
   },
-  "track1_aggregation": {
+  "track3_aggregation": {
     "method": "max",
-    "description": "Use max probability among hypotension/tachycardia/low_spo2 for Track 1 score"
+    "description": "Use max probability among hypotension/tachycardia/low_spo2 for Track 3 score"
   },
   "risk_tiers": {
-    "HIGH": {"min": 0.60, "max": 1.0, "action": "IMMEDIATE_ESCALATION"},
+    "CRITICAL": {"min": 0.85, "max": 1.0, "action": "IMMEDIATE_ESCALATION"},
+    "HIGH": {"min": 0.60, "max": 0.85, "action": "IMMEDIATE_REVIEW"},
     "MODERATE": {"min": 0.30, "max": 0.60, "action": "MONITOR_CLOSELY"},
     "LOW": {"min": 0.0, "max": 0.30, "action": "ROUTINE_CARE"}
   },

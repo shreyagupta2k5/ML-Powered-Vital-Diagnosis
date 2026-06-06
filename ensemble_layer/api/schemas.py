@@ -4,17 +4,25 @@ Pydantic schemas for Ensemble API request/response validation.
 Centralized schema definitions for consistency.
 """
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 from datetime import datetime
 
-class Track1SignalInput(BaseModel):
-    """Raw waveform input for Track 1."""
+# class Track1SignalInput(BaseModel):
+#     """Raw waveform input for Track 1."""
+#     ecg: List[float] = Field(..., description="ECG waveform samples")
+#     hr: List[float] = Field(..., description="Heart rate time series")
+#     map: List[float] = Field(..., description="Mean arterial pressure time series")
+#     spo2: List[float] = Field(..., description="Oxygen saturation time series")
+
+class Track3SignalInput(BaseModel):
+    """Raw waveform input for Track 3 (VitalDB)."""
     ecg: List[float] = Field(..., description="ECG waveform samples")
     hr: List[float] = Field(..., description="Heart rate time series")
     map: List[float] = Field(..., description="Mean arterial pressure time series")
     spo2: List[float] = Field(..., description="Oxygen saturation time series")
 
-class Track1FeatureInput(BaseModel):
+# class Track1FeatureInput(BaseModel):
+class Track3FeatureInput(BaseModel):
     """Pre-extracted features for Track 1."""
     mean_hr: float
     std_hr: float
@@ -43,11 +51,19 @@ class EnsembleInput(BaseModel):
     patient_id: Optional[str] = None
     timestamp: Optional[str] = None
     
-    # Track-specific inputs
-    track1_signals: Optional[Track1SignalInput] = None
-    track1_features: Optional[Track1FeatureInput] = None
+    # # Track-specific inputs
+    # track1_signals: Optional[Track1SignalInput] = None
+    # track1_features: Optional[Track1FeatureInput] = None
+    # track2_features: Optional[Dict[str, float]] = None
+    # track3_features: Optional[Dict[str, float]] = None
+    
+    # Track 1: eICU (Accepts Any because it requires string demographics)
+    track1_features: Optional[Dict[str, Any]] = None 
+    # Track 2: MIMIC
     track2_features: Optional[Dict[str, float]] = None
-    track3_features: Optional[Dict[str, float]] = None
+    # Track 3: VitalDB
+    track3_signals: Optional[Track3SignalInput] = None
+    track3_features: Optional[Track3FeatureInput] = None
     
     class Config:
         json_schema_extra = {
