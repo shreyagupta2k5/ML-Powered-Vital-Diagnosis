@@ -6,8 +6,10 @@ from fastapi import FastAPI, Request, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend_main.auth_router import router as auth_router
-import warnings
+from backend_main.websockets.alert_stream import router as ws_router
+from backend_main.websockets.alert_stream import alert_worker
 
+import warnings
 from sklearn.exceptions import (
     InconsistentVersionWarning
 )
@@ -99,7 +101,16 @@ app.include_router(ensemble_router)
 app.include_router(registry_router)
 app.include_router(drift_router)
 app.include_router(auth_router)
-app.include_router(websocket_router)
+app.include_router(ws_router)
+
+# =============================================================================
+# STARTUP EVENTS
+# =============================================================================
+@app.on_event("startup")
+async def startup_websocket_worker():
+    """Start the WebSocket background worker (must be on the main app)."""
+    asyncio.create_task(alert_worker())
+    print(" WebSocket alert worker started.")
 
 # =============================================================================
 # CORE ENDPOINTS

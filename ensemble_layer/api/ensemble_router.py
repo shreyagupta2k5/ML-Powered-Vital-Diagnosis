@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from ..services.aggregator import EnsembleAggregator
 from ..services.risk_scorer import RiskScorer
 import os
+from backend_main.websockets.alert_stream import publish_high_risk
 
 # ── Registry & Drift imports (Tasks 3.2 & 3.3) ───────────────────────────────
 from backend_shared.registry.model_registry import (
@@ -385,7 +386,15 @@ async def predict_ensemble(
         "track3_vitaldb": track_outputs.get("track3_vitaldb", {}).get("model_used", "unknown"),
     }
     model_versions = {k: v for k, v in model_versions.items() if k in track_outputs}
-
+    # =========================================================================
+    # TRIGGER WEBSOCKET ALERTS (Task 4.2 Integration)
+    # =========================================================================
+    if ensemble_result["risk_tier"] in ["HIGH", "CRITICAL"] and request.patient_id:
+        try:
+            await publish_high_risk(request.patient_id, ensemble_result["risk_score"])
+        except Exception as e:
+            print(f"WebSocket alert failed: {e}")
+            
     return EnsemblePredictResponse(
         patient_id=request.patient_id,
         timestamp=request.timestamp or datetime.now(timezone.utc).isoformat(),
