@@ -1,0 +1,9 @@
+{
+  "patient_id": "TEST_MIMIC_001",
+  "glucose_mean": 165.0,
+  "glucose_count": 12.0,
+  "sbp_mean": 148.0,
+  "sbp_count": 45.0,
+  "map_mean": 102.0,
+  "map_count": 45.0
+}

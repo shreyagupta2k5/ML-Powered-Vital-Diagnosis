@@ -1,0 +1,16 @@
+{
+  "patient_id": null,
+  "track1_features": {
+    "age": "not_a_number",
+    "gender": 12345,
+    "missing_required_feature": true
+  },
+  "track2_features": {
+    "glucose_mean": -999.0,
+    "invalid_key_here": "should_fail_validation"
+  },
+  "track3_features": {
+    "mean_hr": "string_instead_of_float",
+    "mean_map": null
+  }
+}

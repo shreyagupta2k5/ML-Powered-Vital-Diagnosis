@@ -1,0 +1,23 @@
+{
+  "patient_id": "TEST_EICU_001",
+  "age": 72,
+  "gender": "Male",
+  "ethnicity": "Caucasian",
+  "admissionweight": 82.5,
+  "heartrate_mean": 98.0,
+  "heartrate_min": 75.0,
+  "heartrate_max": 135.0,
+  "heartrate_std": 14.5,
+  "heartrate_count": 24,
+  "respiration_mean": 22.0,
+  "sao2_mean": 94.0,
+  "sao2_min": 88.0,
+  "temperature_mean": 37.8,
+  "systemicmean_mean": 68.0,
+  "systemicmean_min": 55.0,
+  "systemicmean_max": 82.0,
+  "systemicmean_std": 7.5,
+  "lactate_mean": 3.8,
+  "creatinine_mean": 2.4,
+  "glucose_mean": 185.0
+}
