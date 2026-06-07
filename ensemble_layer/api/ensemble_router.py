@@ -400,17 +400,17 @@ async def predict_ensemble(
 
 @router.post("/predict/track1")
 async def predict_track1(payload: Dict):
-    return await _call_track_api(TRACK1_EICU_URL, payload, "track1_eicu")
+    return await _call_track_api(VITALDB_URL, payload, "track1_waveform")
 
 
 @router.post("/predict/track2")
 async def predict_track2(payload: Dict):
-    return await _call_track_api(TRACK2_MIMIC_URL, payload, "track2_multimorbidity")
+    return await _call_track_api(MIMIC_URL, payload, "track2_multimorbidity")
 
 
 @router.post("/predict/track3")
 async def predict_track3(payload: Dict):
-    return await _call_track_api(TRACK3_VITALDB_URL, payload, "track3_vitaldb")
+    return await _call_track_api(EICU_URL, payload, "track3_mortality")
 
 
 @router.get("/health")
@@ -532,14 +532,7 @@ def trigger_drift_check():
 @drift_router.get("/{track_id}")
 def drift_status(track_id: str):
     """Run and return drift check report for a single track."""
-    # Normalize short IDs to full track IDs
-    TRACK_ID_MAP = {
-        "track1": "track1_eicu",
-        "track2": "track2_multimorbidity",
-        "track3": "track3_vitaldb",
-    }
-    resolved_id = TRACK_ID_MAP.get(track_id, track_id)  # pass-through if already full
-    return check_drift_for_track(resolved_id)
+    return check_drift_for_track(track_id)
 
 
 # ============================================================================

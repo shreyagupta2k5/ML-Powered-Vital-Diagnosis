@@ -158,13 +158,18 @@ def _get_recent_predictions_from_csv(track_id: str, window_minutes: int) -> Opti
 
 TRACK_FEATURE_CONFIG = {
     "track1_eicu": {
-        "features": ["observation_window_hours", "mortality_probability", "latency_ms"],
+        "top_n": 50,
+        "shap_file": "track1_eicu_pipeline/models/shap_feature_importance.json",
     },
     "track2_multimorbidity": {
-        "features": ["glucose_mean", "glucose_min", "glucose_max", "glucose_std", "glucose_cv", "glucose_count"],
+    "features": [
+        "glucose_mean", "glucose_min", "glucose_max",
+        "glucose_std", "glucose_cv", "glucose_count"
+    ],
     },
     "track3_vitaldb": {
-        "features": ["ECG", "HR", "MAP", "SPO2"],
+        "top_n": 10,
+        "shap_file": "track3_vitalDB/backend/models/shap_feature_importance.json",
     },
 }
 
@@ -256,11 +261,6 @@ def check_drift_for_track(
 
         if len(ref_vals) < 30 or len(cur_vals) < 10:
             logger.debug(f"[{track_id}] Skipping {feature}: insufficient samples.")
-            continue
-
-        # Skip near-constant features — PSI is meaningless on them
-        if ref_vals.std() < 1e-6:
-            logger.debug(f"[{track_id}] Skipping {feature}: near-constant in reference (std={ref_vals.std():.2e})")
             continue
 
         psi = compute_psi(ref_vals, cur_vals)
