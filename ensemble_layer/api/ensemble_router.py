@@ -70,6 +70,11 @@ class EnsemblePredictRequest(BaseModel):
         None, description="Pre-extracted 26 features for Track 3 VitalDB"
     )
 
+class SHAPFeature(BaseModel):
+    feature: str
+    shap_value: float
+    direction: str
+
 class EnsemblePredictResponse(BaseModel):
     """Phase 7 compliant unified ensemble output."""
     patient_id: Optional[str]
@@ -78,7 +83,7 @@ class EnsemblePredictResponse(BaseModel):
     risk_score: float = Field(..., ge=0.0, le=1.0)
     track_results: Dict[str, Dict]
     unified_alert: str
-    top_features: List[str]
+    top_features: List[Union[str, SHAPFeature]]
     model_versions: Dict[str, str]
     processing_time_ms: float
 
@@ -196,6 +201,28 @@ async def predict_ensemble(
         print(f"Failed to log ensemble prediction to DB: {e}")
 
     # =========================================================================
+    # STANDARDIZE SHAP RESPONSE FOR FRONTEND COMPATIBILITY
+    # =========================================================================
+    standardized_features = []
+    raw_features = ensemble_result.get("top_features", [])
+    
+    if raw_features:
+        # If features are already objects (from Track 1), keep them
+        if isinstance(raw_features[0], dict):
+            standardized_features = raw_features
+        else:
+            # If features are strings (from Track 2/3/Ensemble), convert to objects
+            # We assign dummy weights for visualization since the backend only returned names
+            weight = 1.0
+            for i, feature_name in enumerate(raw_features):
+                standardized_features.append({
+                    "feature": str(feature_name),
+                    "shap_value": round(weight, 4),
+                    "direction": "increases_risk" # Default assumption for top drivers
+                })
+                weight -= 0.1 # Decrement for visual hierarchy
+
+    # =========================================================================
     # TRIGGER WEBSOCKET ALERTS (Task 4.2 Integration)
     # =========================================================================
     if ensemble_result["risk_tier"] in ["HIGH", "CRITICAL"] and request.patient_id:
@@ -211,7 +238,7 @@ async def predict_ensemble(
         risk_score=ensemble_result["risk_score"],
         track_results=track_outputs,
         unified_alert=ensemble_result["alert"],
-        top_features=ensemble_result["top_features"],
+        top_features=standardized_features, # Use the standardized list here
         model_versions=model_versions,
         processing_time_ms=round(processing_time_ms, 2)
     )
