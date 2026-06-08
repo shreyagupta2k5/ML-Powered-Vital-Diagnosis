@@ -1,4 +1,3 @@
-# ensemble_layer/api/ensemble_router.py
 """
 Ensemble API Gateway — Main entry point for unified risk prediction.
 Routes requests to individual tracks, aggregates results, returns Phase 7 compliant output.
@@ -15,6 +14,8 @@ from ..services.aggregator import EnsembleAggregator
 from ..services.risk_scorer import RiskScorer
 import os
 from backend_main.websockets.alert_stream import publish_high_risk
+from backend_shared.db.logger import log_prediction
+import uuid  # Added for generating request IDs
 
 # ── Registry & Drift imports (Tasks 3.2 & 3.3) ───────────────────────────────
 from backend_shared.registry.model_registry import (
@@ -30,30 +31,6 @@ drift_router = APIRouter(prefix="/api/v1/drift", tags=["Drift Monitor"])
 
 # Configuration
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config" / "weights.json"
-
-# Track API endpoints (configured via environment or defaults)
-# TRACK1_URL = "http://localhost:8001/api/v1/track1/predict"
-# TRACK2_URL = "http://localhost:8002/api/v1/track2/predict"
-# TRACK3_URL = "http://localhost:8003/api/v1/track3/predict"
-
-# Unified backend URLs (all point to the main app on port 8000)
-# TRACK1_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
-# TRACK2_URL = f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/predict"
-# TRACK3_URL = f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/predict"
-
-# # =============================================================================
-# # CORRECTED URL MAPPING
-# # Map Pydantic fields to the ACTUAL project endpoints
-# # =============================================================================
-
-# # Pydantic field: track1_features (VitalDB data) -> Actual endpoint: Track 3 (VitalDB)
-# VITALDB_URL = f"{os.getenv('TRACK3_URL', 'http://127.0.0.1:8000')}/api/v1/track3/predict"
-
-# # Pydantic field: track2_features (MIMIC data) -> Actual endpoint: Track 2 (MIMIC)
-# MIMIC_URL = f"{os.getenv('TRACK2_URL', 'http://127.0.0.1:8000')}/api/v1/track2/predict"
-
-# # Pydantic field: track3_features (eICU data) -> Actual endpoint: Track 1 (eICU)
-# EICU_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
 
 # ── Track URLs (Aligned with backend folder structure) ────────────────────────
 TRACK1_EICU_URL = f"{os.getenv('TRACK1_URL', 'http://127.0.0.1:8000')}/api/v1/track1/predict"
@@ -75,33 +52,6 @@ class EnsemblePredictRequest(BaseModel):
     patient_id: Optional[str] = Field(None, description="Unique patient identifier")
     timestamp: Optional[str] = Field(None, description="ISO 8601 timestamp of observation")
     
-    # Track 1 inputs (VitalDB waveforms)
-    # track1_signals: Optional[Dict[str, List[float]]] = Field(
-    #     None,
-    #     description="Raw physiological signals for Track 1 (ECG, HR, MAP, SpO2 arrays)"
-    # )
-    # track1_features: Optional[Dict[str, float]] = Field(
-    #     None,
-    #     description="Pre-extracted 26 features for Track 1"
-    # )
-    
-    # Track 2 inputs (MIMIC+Pima)
-    # track2_features: Optional[Dict[str, float]] = Field(
-    #     None,
-    #     description="6 leak-free features for Track 2 (glucose_mean, glucose_count, sbp_mean, sbp_count, map_mean, map_count)"
-    # )
-    
-    # # Track 3 inputs (eICU mortality)
-    # track3_features: Optional[Dict[str, float]] = Field(
-    #     None,
-    #     description="562 pre-aggregated features for Track 3 (from metadata/feature_columns.csv)"
-    # )
-    # Changed Dict[str, float] to Dict[str, Any] for all tracks
-    # track1_signals: Optional[Dict[str, List[float]]] = Field(None, description="Raw physiological signals for Track 1")
-    # track1_features: Optional[Dict[str, Any]] = Field(None, description="Pre-extracted features for Track 1 (VitalDB)")
-    # track2_features: Optional[Dict[str, Any]] = Field(None, description="Features for Track 2 (MIMIC+Pima)")
-    # track3_features: Optional[Dict[str, Any]] = Field(None, description="Pre-aggregated features for Track 3 (eICU)")
-
     # Track 1 inputs (eICU mortality) - MUST BE Dict[str, Any] to accept strings like gender
     track1_features: Optional[Dict[str, Any]] = Field(
         None, description="562 pre-aggregated features for Track 1 eICU mortality"
@@ -148,169 +98,10 @@ async def predict_ensemble(
     """
     start_time = asyncio.get_event_loop().time()
 
-    # if not any([
-    #     request.track1_signals or request.track1_features,
-    #     request.track2_features,
-    #     request.track3_features
-    # ]):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="At least one track's input data must be provided"
-    #     )
-
     if not any([request.track1_features, request.track2_features, request.track3_signals or request.track3_features]):
         raise HTTPException(status_code=400, detail="At least one track's input data must be provided")
     track_tasks = []
     track_names = []
-
-    # -------------------------------------------------------------------------
-    # 1. VitalDB data (Pydantic: track1_signals/track1_features)
-    #    -> Actual backend Track 3
-    # -------------------------------------------------------------------------
-    # if request.track1_signals or request.track1_features:
-    #     vitaldb_payload = {}
-
-    #     if request.track1_signals:
-    #         vitaldb_payload["signals"] = request.track1_signals
-
-    #     if request.track1_features:
-    #         vitaldb_payload["features"] = request.track1_features
-
-    #     if request.patient_id:
-    #         vitaldb_payload["patient_id"] = request.patient_id
-
-    #     track_tasks.append(
-    #         _call_track_api(
-    #             VITALDB_URL,
-    #             vitaldb_payload,
-    #             "track1_waveform"
-    #         )
-    #     )
-    #     track_names.append("track1_waveform")
-
-    # # -------------------------------------------------------------------------
-    # # 2. MIMIC data (Pydantic: track2_features)
-    # #    -> Actual backend Track 2
-    # # -------------------------------------------------------------------------
-    # if request.track2_features:
-    #     mimic_payload = request.track2_features.copy()
-
-    #     if request.patient_id:
-    #         mimic_payload["patient_id"] = request.patient_id
-
-    #     track_tasks.append(
-    #         _call_track_api(
-    #             MIMIC_URL,
-    #             mimic_payload,
-    #             "track2_multimorbidity"
-    #         )
-    #     )
-    #     track_names.append("track2_multimorbidity")
-
-    # # -------------------------------------------------------------------------
-    # # 3. eICU data (Pydantic: track3_features)
-    # #    -> Actual backend Track 1
-    # # -------------------------------------------------------------------------
-    # if request.track3_features:
-    #     eicu_payload = request.track3_features.copy()
-
-    #     # if request.patient_id:
-    #     #     eicu_payload["patient_id"] = request.patient_id
-
-    #     # if request.timestamp:
-    #     #     eicu_payload["observation_window_hours"] = 24
-
-    #     # track_tasks.append(
-    #     #     _call_track_api(
-    #     #         EICU_URL,
-    #     #         eicu_payload,
-    #     #         "track3_mortality"
-    #     #     )
-    #     # )
-    #     # track_names.append("track3_mortality")
-    #     if "gender" not in eicu_payload:
-    #         eicu_payload["gender"] = "Female"
-    #     if "ethnicity" not in eicu_payload:
-    #         eicu_payload["ethnicity"] = "Caucasian"
-
-    #     if request.patient_id:
-    #         eicu_payload["patient_id"] = request.patient_id
-
-    #     if request.timestamp:
-    #         eicu_payload["observation_window_hours"] = 24
-
-    #     track_tasks.append(
-    #         _call_track_api(
-    #             EICU_URL,
-    #             eicu_payload,
-    #             "track3_mortality"
-    #         )
-    #     )
-    #     track_names.append("track3_mortality")
-
-    # try:
-    #     results = await asyncio.gather(*track_tasks, return_exceptions=True)
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-    #         detail=f"One or more track services unavailable: {str(e)}"
-    #     )
-
-    # track_outputs = {}
-
-    # for name, result in zip(track_names, results):
-    #     if isinstance(result, Exception):
-    #         raise HTTPException(
-    #             status_code=status.HTTP_502_BAD_GATEWAY,
-    #             detail=f"{name} service failed: {str(result)}"
-    #         )
-    #     track_outputs[name] = result
-
-    # try:
-    #     ensemble_result = aggregator.aggregate(
-    #         track1_output=track_outputs.get("track1_waveform", {}),
-    #         track2_output=track_outputs.get("track2_multimorbidity", {}),
-    #         track3_output=track_outputs.get("track3_mortality", {})
-    #     )
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail=f"Ensemble aggregation failed: {str(e)}"
-    #     )
-
-    # processing_time_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-
-    # model_versions = {}
-
-    # if "track1_waveform" in track_outputs:
-    #     model_versions["track1"] = track_outputs["track1_waveform"].get(
-    #         "model_used",
-    #         "unknown"
-    #     )
-
-    # if "track2_multimorbidity" in track_outputs:
-    #     model_versions["track2"] = track_outputs["track2_multimorbidity"].get(
-    #         "model_version",
-    #         "unknown"
-    #     )
-
-    # if "track3_mortality" in track_outputs:
-    #     model_versions["track3"] = track_outputs["track3_mortality"].get(
-    #         "model_version",
-    #         "unknown"
-    #     )
-
-    # return EnsemblePredictResponse(
-    #     patient_id=request.patient_id,
-    #     timestamp=request.timestamp or datetime.now(timezone.utc).isoformat(),
-    #     overall_risk=ensemble_result["risk_tier"],
-    #     risk_score=ensemble_result["risk_score"],
-    #     track_results=track_outputs,
-    #     unified_alert=ensemble_result["alert"],
-    #     top_features=ensemble_result["top_features"],
-    #     model_versions=model_versions,
-    #     processing_time_ms=round(processing_time_ms, 2)
-    # )
 
     # -------------------------------------------------------------------------
     # Track 1 — eICU mortality
@@ -386,6 +177,24 @@ async def predict_ensemble(
         "track3_vitaldb": track_outputs.get("track3_vitaldb", {}).get("model_used", "unknown"),
     }
     model_versions = {k: v for k, v in model_versions.items() if k in track_outputs}
+    
+    # =========================================================================
+    # LOG TO SHARED DATABASE FOR HISTORY ENDPOINT
+    # =========================================================================
+    try:
+        log_prediction(
+            request_id=str(uuid.uuid4()),  # Generate a unique ID for this ensemble call
+            track_id="ensemble_unified",
+            probability=ensemble_result["risk_score"],
+            risk_tier=ensemble_result["risk_tier"],
+            patient_id=request.patient_id,
+            features_json=None,  # Optionally pass the input features if needed
+            latency_ms=processing_time_ms,
+            model_version="ensemble_v1.0.0"
+        )
+    except Exception as e:
+        print(f"Failed to log ensemble prediction to DB: {e}")
+
     # =========================================================================
     # TRIGGER WEBSOCKET ALERTS (Task 4.2 Integration)
     # =========================================================================

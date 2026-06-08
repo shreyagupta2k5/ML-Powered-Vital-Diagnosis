@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend_main.auth_router import router as auth_router
 from backend_main.websockets.alert_stream import router as ws_router
 from backend_main.websockets.alert_stream import alert_worker
+from backend_main.api.history_router import router as history_router  # NEW IMPORT
 
 import warnings
 from sklearn.exceptions import (
@@ -33,8 +34,6 @@ from ensemble_layer.api.ensemble_router import (
     registry_router,
     drift_router
 )
-
-from backend_main.websockets.alert_stream import router as websocket_router
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -102,6 +101,7 @@ app.include_router(registry_router)
 app.include_router(drift_router)
 app.include_router(auth_router)
 app.include_router(ws_router)
+app.include_router(history_router)  # NEW MOUNT
 
 # =============================================================================
 # STARTUP EVENTS
