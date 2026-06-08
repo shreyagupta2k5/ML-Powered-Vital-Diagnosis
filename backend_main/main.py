@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend_main.auth_router import router as auth_router
 from backend_main.websockets.alert_stream import router as ws_router
-from backend_main.websockets.alert_stream import alert_worker
-from backend_main.api.history_router import router as history_router  # NEW IMPORT
+from backend_main.websockets.alert_stream import alert_worker # RESTORED IMPORT
+from backend_main.api.history_router import router as history_router
 
 import warnings
 from sklearn.exceptions import (
@@ -91,8 +91,6 @@ async def rate_limit_error_handler(request: Request, exc):
 # =============================================================================
 # ROUTER INCLUSION
 # =============================================================================
-# Note: Individual routers already have their own prefixes defined in their respective files.
-# We include them here to mount them to the main app.
 app.include_router(track1_router)
 app.include_router(track2_router)
 app.include_router(track3_router)
@@ -101,7 +99,7 @@ app.include_router(registry_router)
 app.include_router(drift_router)
 app.include_router(auth_router)
 app.include_router(ws_router)
-app.include_router(history_router)  # NEW MOUNT
+app.include_router(history_router)
 
 # =============================================================================
 # STARTUP EVENTS
@@ -110,7 +108,7 @@ app.include_router(history_router)  # NEW MOUNT
 async def startup_websocket_worker():
     """Start the WebSocket background worker (must be on the main app)."""
     asyncio.create_task(alert_worker())
-    print(" WebSocket alert worker started.")
+    print("✅ WebSocket alert worker started.")
 
 # =============================================================================
 # CORE ENDPOINTS
@@ -138,7 +136,7 @@ async def root():
 async def health_check():
     """
     Aggregated health check endpoint.
-    Pings all individual track services to ensure the entire ecosystem is healthy.
+    Checks internal model loading status since all tracks run on port 8000.
     """
     health_status = {
         "status": "healthy",
@@ -147,24 +145,29 @@ async def health_check():
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
     
-    track_urls = {
-        "track1_eicu": f"{settings.TRACK1_URL}/api/v1/track1/health",
-        "track2_multimorbidity": f"{settings.TRACK2_URL}/api/v1/track2/health",
-        "track3_vitaldb": f"{settings.TRACK3_URL}/api/v1/track3/health",
-    }
-    
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        for name, url in track_urls.items():
-            try:
-                response = await client.get(url)
-                health_status["tracks"][name] = "healthy" if response.status_code == 200 else "unhealthy"
-            except httpx.RequestError:
-                health_status["tracks"][name] = "unreachable"
-            except Exception:
-                health_status["tracks"][name] = "error"
+    # Check Track 1 (eICU)
+    try:
+        from track1_eicu_pipeline.api.eicu_router import _model as t1_model
+        health_status["tracks"]["track1_eicu"] = "healthy" if t1_model else "unhealthy"
+    except Exception:
+        health_status["tracks"]["track1_eicu"] = "error"
+
+    # Check Track 2 (MIMIC)
+    try:
+        from track2_multimorbidity.api.track2_router import model as t2_model 
+        health_status["tracks"]["track2_multimorbidity"] = "healthy" if t2_model else "unhealthy"
+    except Exception:
+        health_status["tracks"]["track2_multimorbidity"] = "error"
+
+    # Check Track 3 (VitalDB)
+    try:
+        from track3_vitalDB.backend.api.vitaldb_router import hyp_model as t3_model
+        health_status["tracks"]["track3_vitaldb"] = "healthy" if t3_model else "unhealthy"
+    except Exception:
+        health_status["tracks"]["track3_vitaldb"] = "error"
                 
     # Determine overall system status
-    if any(status in ["unhealthy", "unreachable", "error"] for status in health_status["tracks"].values()):
+    if any(status in ["unhealthy", "error"] for status in health_status["tracks"].values()):
         health_status["status"] = "degraded"
         
     return health_status
