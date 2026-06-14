@@ -1,0 +1,368 @@
+// ============================================================
+// PAGE 4 — MLOps & Admin Panel
+// Route: /admin/mlops
+// File: src/pages/Admin.jsx
+//
+// WHAT THIS DOES:
+//   - System health status (3 track dots)
+//   - Drift monitor with PSI bars per feature
+//   - Model registry with hot-swap button
+// ============================================================
+
+import { useState, useEffect } from "react";
+import { useNavigate }         from "react-router-dom";
+import { mlopsService }         from "../api/mlopsService";
+import ConfirmModal             from "../components/common/ConfirmModal";
+import LoadingSpinner           from "../components/common/LoadingSpinner";
+
+// Map trackId key to display name
+const TRACK_DISPLAY = {
+  track1_eicu:           "Track 1 — eICU Mortality",
+  track2_multimorbidity: "Track 2 — MIMIC Crisis",
+  track3_vitaldb:        "Track 3 — VitalDB Waveforms",
+};
+
+// Drift tabs
+const DRIFT_TRACKS = [
+  { key: "track2_multimorbidity", label: "Track 2" },
+  { key: "track1_eicu",           label: "Track 1" },
+  { key: "track3_vitaldb",        label: "Track 3" },
+];
+
+export default function AdminPage() {
+  const navigate = useNavigate();
+
+  const [health,      setHealth]      = useState(null);
+  const [driftData,   setDriftData]   = useState(null);
+  const [activeTrack, setActiveTrack] = useState("track2_multimorbidity");
+  const [regTrack,    setRegTrack]    = useState("track2_multimorbidity");
+  const [regData,     setRegData]     = useState(null);
+  const [showModal,   setShowModal]   = useState(false);
+  const [loading,     setLoading]     = useState(true);
+
+  // Load health on mount, poll every 30s
+  useEffect(() => {
+    async function loadHealth() {
+      try {
+        const h = await mlopsService.getHealth();
+        setHealth(h);
+      } catch (e) {
+        console.warn("Health load failed", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadHealth();
+    const interval = setInterval(loadHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load drift when tab changes
+  useEffect(() => {
+    async function loadDrift() {
+      try {
+        const d = await mlopsService.getDriftStatus(activeTrack);
+        setDriftData(d[activeTrack] || null);
+      } catch (e) {
+        console.warn("Drift load failed", e);
+      }
+    }
+    loadDrift();
+  }, [activeTrack]);
+
+  // Load model registry when dropdown changes
+  useEffect(() => {
+    async function loadModel() {
+      try {
+        const m = await mlopsService.getActiveModel(regTrack);
+        setRegData(m);
+      } catch (e) {
+        console.warn("Registry load failed", e);
+      }
+    }
+    loadModel();
+  }, [regTrack]);
+
+  function handleHotSwap() {
+    setShowModal(false);
+    // 🔌 BACKEND CONNECT: POST /api/v1/registry/{regTrack}/hot-swap
+    alert(`✅ Hot-swap triggered for ${TRACK_DISPLAY[regTrack]}.\nIn production this will swap the live model.`);
+  }
+
+  return (
+    <div style={{ background: "#F0F2F5", minHeight: "100vh",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+
+      {/* Navbar */}
+      <nav style={{
+        background: "#fff", borderBottom: "1px solid #E8ECF0",
+        padding: "0 1.5rem", height: 52,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={logoBox}>♥</div>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>VitalDx</span>
+          <span style={{ color: "#ddd" }}>|</span>
+          <span style={{ fontSize: 13, color: "#999" }}>MLOps & Admin</span>
+        </div>
+        <button onClick={() => navigate("/dashboard")} style={navBtn}>← Dashboard</button>
+      </nav>
+
+      <div style={{ padding: "1.5rem" }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111", margin: "0 0 4px" }}>
+          MLOps & Admin Panel
+        </h1>
+        <p style={{ fontSize: 12, color: "#999", marginBottom: "1.5rem" }}>
+          Monitor model health, data drift, and manage model versions
+        </p>
+
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <>
+
+          {/* ── SECTION 1: SYSTEM HEALTH ── */}
+          <Section title="💓 System Health" subtitle="Auto-refreshing every 30 seconds">
+            {health && (
+              <>
+                <div style={{
+                  background: health.status === "healthy" ? "#F0FDF4" : "#FFFBEB",
+                  border: `1px solid ${health.status === "healthy" ? "#BBF7D0" : "#FDE68A"}`,
+                  borderRadius: 8, padding: "8px 14px",
+                  fontSize: 12, fontWeight: 600,
+                  color: health.status === "healthy" ? "#15803D" : "#92400E",
+                  marginBottom: 14,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <span>{health.status === "healthy" ? "🟢" : "🟡"}</span>
+                  Overall: {health.status.toUpperCase()}
+                  <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.7 }}>
+                    Uptime: {Math.floor(health.uptime_seconds / 3600)}h
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+                  {Object.entries(health.tracks).map(([key, t]) => (
+                    <div key={key} style={{
+                      background: "#F8FAFC", borderRadius: 10,
+                      padding: "0.875rem 1rem",
+                      display: "flex", alignItems: "flex-start", gap: 12,
+                    }}>
+                      <div style={{
+                        width: 10, height: 10, borderRadius: "50%", marginTop: 3, flexShrink: 0,
+                        background: t.status === "healthy" ? "#16A34A" : t.status === "degraded" ? "#D97706" : "#DC2626",
+                        boxShadow: `0 0 0 3px ${t.status === "healthy" ? "rgba(22,163,74,0.15)" : "rgba(217,119,6,0.15)"}`,
+                      }} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>
+                          {TRACK_DISPLAY[key]}
+                        </div>
+                        <div style={{
+                          fontSize: 11, marginTop: 2,
+                          color: t.status === "healthy" ? "#16A34A" : "#D97706",
+                        }}>
+                          {t.status.charAt(0).toUpperCase() + t.status.slice(1)} · {t.version}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#bbb", marginTop: 1 }}>
+                          Latency: {t.latency_ms}ms
+                        </div>
+                        {t.warning && (
+                          <div style={{ fontSize: 10, color: "#D97706", marginTop: 3 }}>{t.warning}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </Section>
+
+          {/* ── SECTION 2: DRIFT MONITOR ── */}
+          <Section title="📊 Drift Monitor"
+            subtitle="PSI > 0.25 means the model is seeing data different from training">
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {DRIFT_TRACKS.map(t => (
+                <button key={t.key}
+                  onClick={() => setActiveTrack(t.key)}
+                  style={{
+                    padding: "5px 14px", fontSize: 12,
+                    border: "1px solid",
+                    borderColor: activeTrack === t.key ? "#BFDBFE" : "#E8ECF0",
+                    borderRadius: 7, cursor: "pointer",
+                    background: activeTrack === t.key ? "#EFF6FF" : "#fff",
+                    color: activeTrack === t.key ? "#1D4ED8" : "#777",
+                    fontWeight: activeTrack === t.key ? 700 : 400,
+                  }}
+                >{t.label}</button>
+              ))}
+            </div>
+
+            {driftData && (
+              <>
+                {driftData.features_drifted > 0 && (
+                  <div style={{
+                    background: "#FFFBEB", border: "1px solid #FDE68A",
+                    borderRadius: 8, padding: "8px 14px",
+                    fontSize: 12, color: "#92400E", marginBottom: 14,
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    ⚠️ <strong>{driftData.features_drifted} feature drifted</strong> —
+                    PSI above 0.25 threshold. Consider retraining.
+                  </div>
+                )}
+                {driftData.metrics.map(f => (
+                  <div key={f.feature_name} style={{ marginBottom: 14 }}>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between",
+                      fontSize: 12, marginBottom: 4,
+                    }}>
+                      <span style={{ color: "#555" }}>{f.feature_name}</span>
+                      <span style={{
+                        fontWeight: 700,
+                        color: f.alert_flag ? "#B91C1C" : "#555",
+                      }}>
+                        PSI {f.psi_score.toFixed(2)} {f.alert_flag ? "⚠" : ""}
+                      </span>
+                    </div>
+                    <div style={{
+                      height: 8, background: "#EEF0F2",
+                      borderRadius: 4, overflow: "hidden", position: "relative",
+                    }}>
+                      {/* Threshold marker at 50% = PSI 0.25 */}
+                      <div style={{
+                        position: "absolute", left: "50%", top: 0, bottom: 0,
+                        width: 2, background: "#F59E0B", zIndex: 1,
+                      }} />
+                      <div style={{
+                        width: `${Math.min((f.psi_score / 0.5) * 100, 100)}%`,
+                        height: "100%",
+                        background: f.alert_flag ? "#E24B4A" : "#60A5FA",
+                        borderRadius: 4,
+                        transition: "width 0.5s ease",
+                      }} />
+                    </div>
+                    <div style={{
+                      display: "flex", justifyContent: "flex-end",
+                      fontSize: 10, color: "#bbb", marginTop: 2, gap: 4,
+                    }}>
+                      <span style={{ display: "inline-block", width: 12, height: 2, background: "#F59E0B", verticalAlign: "middle" }} />
+                      threshold: 0.25
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </Section>
+
+          {/* ── SECTION 3: MODEL REGISTRY ── */}
+          <Section title="🗄️ Model Registry" subtitle="View active model versions and trigger hot-swap">
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <select
+                value={regTrack}
+                onChange={e => setRegTrack(e.target.value)}
+                style={{ padding: "7px 10px", borderRadius: 8, fontSize: 13, border: "1px solid #D1D5DB" }}
+              >
+                {Object.entries(TRACK_DISPLAY).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+              {regData && (
+                <span style={{ fontSize: 12, color: "#aaa" }}>
+                  {regData.deployment_status}
+                </span>
+              )}
+            </div>
+
+            {regData && (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+                  {[
+                    { label: "Version",    value: regData.model_version },
+                    { label: "AUC",        value: regData.auc.toFixed(2),    good: true },
+                    { label: "F1 Score",   value: regData.f1.toFixed(2) },
+                    { label: "Recall",     value: regData.recall.toFixed(2) },
+                  ].map(m => (
+                    <div key={m.label} style={{ background: "#F8FAFC", borderRadius: 8, padding: "0.75rem" }}>
+                      <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>{m.label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: m.good ? "#15803D" : "#111" }}>
+                        {m.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#888" }}>
+                    Training date: {regData.training_date} ·{" "}
+                    <span style={{
+                      background: "#F0FDF4", color: "#15803D",
+                      borderRadius: 4, padding: "2px 8px", fontSize: 11,
+                    }}>
+                      {regData.deployment_status}
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => setShowModal(true)}
+                    style={{
+                      marginLeft: "auto",
+                      padding: "7px 16px", fontSize: 13,
+                      border: "1px solid #FDE68A", borderRadius: 8,
+                      background: "#FFFBEB", color: "#92400E", cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚡ Hot-swap model
+                  </button>
+                </div>
+              </>
+            )}
+          </Section>
+
+          </>
+        )}
+      </div>
+
+      {/* Hot-swap confirm modal */}
+      {showModal && (
+        <ConfirmModal
+          title="Confirm Hot-Swap?"
+          message={`This will replace the active ${TRACK_DISPLAY[regTrack]} model with the staged version. The old model will be archived.`}
+          onConfirm={handleHotSwap}
+          onCancel={() => setShowModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Helper components ──────────────────────────────────────────
+function Section({ title, subtitle, children }) {
+  return (
+    <div style={{
+      background: "#fff",
+      border: "1px solid #E8ECF0",
+      borderRadius: 12,
+      padding: "1.25rem 1.5rem",
+      marginBottom: "1.25rem",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+    }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>{title}</span>
+        {subtitle && <span style={{ fontSize: 11, color: "#aaa" }}>{subtitle}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const logoBox = {
+  width: 28, height: 28, background: "#E24B4A", borderRadius: 6,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  color: "#fff", fontSize: 13, fontWeight: 700,
+};
+const navBtn = {
+  fontSize: 12, padding: "5px 12px",
+  border: "1px solid #E8ECF0", borderRadius: 7,
+  background: "#fff", color: "#777", cursor: "pointer",
+};
