@@ -6,7 +6,7 @@
 //   3. "ICU Dashboard" label next to VitalDx is now more visible
 //   4. Doctor avatar click → goes to /account page
 // ============================================================
-
+import { predictionService } from "../api/predictionService";
 import { useState, useEffect }       from "react";
 import { useNavigate }               from "react-router-dom";
 import { useDispatch, useSelector }  from "react-redux";
@@ -49,9 +49,25 @@ export default function DashboardPage() {
   useAlertWebSocket();
 
   useEffect(() => {
-    setTimeout(() => {
-      dispatch(setPatients(mockPatients));
-    }, 600);
+    async function loadPatients() {
+      try {
+        const history = await predictionService.getHistory();
+        // Map real backend fields to our frontend shape
+        const mapped = history.map(p => ({
+          id: p.patient_id,
+          risk_tier: p.last_risk_tier,
+          risk_score: p.last_probability,
+          unified_alert: p.track_id || "No active alerts",
+          last_updated: p.last_timestamp,
+          bed: "ICU",
+        }));
+        dispatch(setPatients(mapped));
+      } catch (err) {
+        console.warn("Failed to load patients, using mock data", err);
+        dispatch(setPatients(mockPatients));
+      }
+    }
+    loadPatients();
   }, [dispatch]);
 
   function handleLogout() {

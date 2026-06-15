@@ -62,7 +62,8 @@ export default function AdminPage() {
     async function loadDrift() {
       try {
         const d = await mlopsService.getDriftStatus(activeTrack);
-        setDriftData(d[activeTrack] || null);
+        // Real backend returns data directly, mock returns nested under track ID
+        setDriftData(d.metrics ? d : d[activeTrack] || null);
       } catch (e) {
         console.warn("Drift load failed", e);
       }
@@ -139,40 +140,40 @@ export default function AdminPage() {
                   <span>{health.status === "healthy" ? "🟢" : "🟡"}</span>
                   Overall: {health.status.toUpperCase()}
                   <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.7 }}>
-                    Uptime: {Math.floor(health.uptime_seconds / 3600)}h
+                    {health.timestamp ? `As of ${new Date(health.timestamp).toLocaleTimeString()}` : ""}
                   </span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-                  {Object.entries(health.tracks).map(([key, t]) => (
-                    <div key={key} style={{
-                      background: "#F8FAFC", borderRadius: 10,
-                      padding: "0.875rem 1rem",
-                      display: "flex", alignItems: "flex-start", gap: 12,
-                    }}>
-                      <div style={{
-                        width: 10, height: 10, borderRadius: "50%", marginTop: 3, flexShrink: 0,
-                        background: t.status === "healthy" ? "#16A34A" : t.status === "degraded" ? "#D97706" : "#DC2626",
-                        boxShadow: `0 0 0 3px ${t.status === "healthy" ? "rgba(22,163,74,0.15)" : "rgba(217,119,6,0.15)"}`,
-                      }} />
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>
-                          {TRACK_DISPLAY[key]}
-                        </div>
+                  {Object.entries(health.tracks).map(([key, t]) => {
+                    // Real backend returns t as a string e.g. "healthy"
+                    // Mock returns t as an object e.g. { status: "healthy", latency_ms: 142 }
+                    const status = typeof t === "string" ? t : t.status;
+                    const isHealthy = status === "healthy";
+                    return (
+                      <div key={key} style={{
+                        background: "#F8FAFC", borderRadius: 10,
+                        padding: "0.875rem 1rem",
+                        display: "flex", alignItems: "flex-start", gap: 12,
+                      }}>
                         <div style={{
-                          fontSize: 11, marginTop: 2,
-                          color: t.status === "healthy" ? "#16A34A" : "#D97706",
-                        }}>
-                          {t.status.charAt(0).toUpperCase() + t.status.slice(1)} · {t.version}
+                          width: 10, height: 10, borderRadius: "50%", marginTop: 3, flexShrink: 0,
+                          background: isHealthy ? "#16A34A" : "#D97706",
+                          boxShadow: `0 0 0 3px ${isHealthy ? "rgba(22,163,74,0.15)" : "rgba(217,119,6,0.15)"}`,
+                        }} />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>
+                            {TRACK_DISPLAY[key]}
+                          </div>
+                          <div style={{
+                            fontSize: 11, marginTop: 2,
+                            color: isHealthy ? "#16A34A" : "#D97706",
+                          }}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </div>
                         </div>
-                        <div style={{ fontSize: 11, color: "#bbb", marginTop: 1 }}>
-                          Latency: {t.latency_ms}ms
-                        </div>
-                        {t.warning && (
-                          <div style={{ fontSize: 10, color: "#D97706", marginTop: 3 }}>{t.warning}</div>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -200,6 +201,14 @@ export default function AdminPage() {
 
             {driftData && (
               <>
+                {driftData.metrics && driftData.metrics.length === 0 && (
+                  <div style={{
+                    textAlign: "center", padding: "2rem",
+                    color: "#aaa", fontSize: 13,
+                  }}>
+                    📊 No drift metrics available for this track yet.
+                  </div>
+                )}
                 {driftData.features_drifted > 0 && (
                   <div style={{
                     background: "#FFFBEB", border: "1px solid #FDE68A",
@@ -269,7 +278,7 @@ export default function AdminPage() {
               </select>
               {regData && (
                 <span style={{ fontSize: 12, color: "#aaa" }}>
-                  {regData.deployment_status}
+                  {(regData.status || regData.deployment_status || "ACTIVE").toUpperCase()}
                 </span>
               )}
             </div>
@@ -278,10 +287,9 @@ export default function AdminPage() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
                   {[
-                    { label: "Version",    value: regData.model_version },
-                    { label: "AUC",        value: regData.auc.toFixed(2),    good: true },
-                    { label: "F1 Score",   value: regData.f1.toFixed(2) },
-                    { label: "Recall",     value: regData.recall.toFixed(2) },
+                    { label: "AUC",      value: (regData.performance_metrics?.auc || regData.auc || 0).toFixed(2), good: true },
+                    { label: "F1 Score", value: (regData.performance_metrics?.f1  || regData.f1  || 0).toFixed(2) },
+                    { label: "Recall",   value: (regData.performance_metrics?.recall || regData.recall || 0).toFixed(2) },
                   ].map(m => (
                     <div key={m.label} style={{ background: "#F8FAFC", borderRadius: 8, padding: "0.75rem" }}>
                       <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>{m.label}</div>
@@ -294,12 +302,12 @@ export default function AdminPage() {
 
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <span style={{ fontSize: 12, color: "#888" }}>
-                    Training date: {regData.training_date} ·{" "}
+                    Training date: {regData.training_date?.split("T")[0]} ·{" "}
                     <span style={{
                       background: "#F0FDF4", color: "#15803D",
                       borderRadius: 4, padding: "2px 8px", fontSize: 11,
                     }}>
-                      {regData.deployment_status}
+                      {(regData.status || regData.deployment_status || "ACTIVE").toUpperCase()}
                     </span>
                   </span>
                   <button

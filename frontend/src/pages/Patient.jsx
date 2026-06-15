@@ -41,13 +41,47 @@ export default function PatientDetailPage() {
 
   useEffect(() => {
     setLoading(true);
-    // 🔌 BACKEND CONNECT: replace with real API call
-    // const result = await predictionService.predictEnsemble({ patient_id: id });
-    // setData(result);
 
-    // MOCK: uses mockPrediction — overrides patient_id with URL id
-    predictionService.predictEnsemble({ patient_id: id }).then(result => {
-      setData({ ...result, patient_id: id });
+    // 🔌 BACKEND CONNECT: get patient from history
+    predictionService.getPatientById(id).then(patient => {
+      if (!patient) {
+        setData(null);
+        setLoading(false);
+        return;
+      }
+
+      // Map history fields to the shape Patient page expects
+      setData({
+        patient_id: patient.patient_id,
+        overall_risk: patient.last_risk_tier,
+        risk_score: patient.last_probability,
+        unified_alert: `${patient.last_risk_tier} — ${patient.track_id}`,
+        timestamp: patient.last_timestamp,
+        top_features: [],
+        track_results: {
+          track1_eicu: {
+            mortality_probability: patient.last_probability,
+            risk_tier: patient.last_risk_tier,
+            model_version: "v1.0.0",
+          },
+          track2_multimorbidity: {
+            crisis_probability: patient.last_probability,
+            severity_level: patient.last_risk_tier,
+            confidence_interval: [0, 0],
+            model_version: "v4.0.0",
+          },
+          track3_vitaldb: {
+            hypotension_probability: 0,
+            tachycardia_probability: 0,
+            spo2_drop_probability: 0,
+            risk_level: patient.last_risk_tier,
+            model_version: "v1.0.0",
+          },
+        },
+      });
+      setLoading(false);
+    }).catch(() => {
+      setData(null);
       setLoading(false);
     });
   }, [id]);
