@@ -187,13 +187,22 @@ async def predict_ensemble(
     # LOG TO SHARED DATABASE FOR HISTORY ENDPOINT
     # =========================================================================
     try:
+        # NEW: Combine all track inputs into a single features dict for re-run comparison
+        combined_features = {}
+        if request.track1_features:
+            combined_features["track1_eicu"] = request.track1_features
+        if request.track2_features:
+            combined_features["track2_multimorbidity"] = request.track2_features
+        if request.track3_features or request.track3_signals:
+            combined_features["track3_vitaldb"] = request.track3_features or {"signals": request.track3_signals}
+
         log_prediction(
             request_id=str(uuid.uuid4()),  # Generate a unique ID for this ensemble call
             track_id="ensemble_unified",
             probability=ensemble_result["risk_score"],
             risk_tier=ensemble_result["risk_tier"],
             patient_id=request.patient_id,
-            features_json=None,  # Optionally pass the input features if needed
+            features_json=combined_features,  
             latency_ms=processing_time_ms,
             model_version="ensemble_v1.0.0",
             prediction_json=ensemble_result
@@ -352,7 +361,6 @@ def hot_swap_model(track_id: str, body: HotSwapRequest):
     if not success:
         raise HTTPException(status_code=500, detail="Hot-swap failed — check logs")
     return {"status": "swapped", "track_id": track_id, "new_version": body.version}
-
 
 # ============================================================================
 # DRIFT ENDPOINTS (Task 3.2)
