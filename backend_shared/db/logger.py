@@ -13,7 +13,8 @@ def log_prediction(
     patient_id: Optional[str] = None,
     features_json: Optional[Dict] = None,
     latency_ms: Optional[float] = None,
-    model_version: Optional[str] = None
+    model_version: Optional[str] = None,
+    prediction_json: Optional[dict] = None 
 ) -> int:
     """Log a single inference prediction to the database. Returns the new entry ID."""
     with get_db_session() as db:
@@ -25,7 +26,8 @@ def log_prediction(
             risk_tier=risk_tier,
             features_json=features_json,
             latency_ms=latency_ms,
-            model_version=model_version
+            model_version=model_version,
+            prediction_json=prediction_json
         )
         db.add(entry)
         db.flush()  # Flush to assign ID without committing

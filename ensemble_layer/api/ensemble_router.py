@@ -195,7 +195,8 @@ async def predict_ensemble(
             patient_id=request.patient_id,
             features_json=None,  # Optionally pass the input features if needed
             latency_ms=processing_time_ms,
-            model_version="ensemble_v1.0.0"
+            model_version="ensemble_v1.0.0",
+            prediction_json=ensemble_result
         )
     except Exception as e:
         print(f"Failed to log ensemble prediction to DB: {e}")

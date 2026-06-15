@@ -4,7 +4,7 @@ History Router — Task 6.1 Fix 1
 Provides a lightweight endpoint to fetch recent patient predictions for the dashboard.
 """
 from fastapi import APIRouter, HTTPException, status
-from typing import List, Optional
+from typing import List, Optional, Dict, Any 
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -20,6 +20,7 @@ class PatientHistoryItem(BaseModel):
     last_probability: float
     last_timestamp: datetime
     track_id: str
+    prediction_json: Optional[Dict[str, Any]] = None
 
 @router.get("/history", response_model=List[PatientHistoryItem])
 async def get_patient_history(limit: int = 50):
@@ -57,7 +58,8 @@ async def get_patient_history(limit: int = 50):
                     last_risk_tier=str(log.risk_tier),
                     last_probability=float(log.probability),
                     last_timestamp=log.timestamp,
-                    track_id=str(log.track_id)
+                    track_id=str(log.track_id),
+                    prediction_json=log.prediction_json
                 ))
                 
             return history

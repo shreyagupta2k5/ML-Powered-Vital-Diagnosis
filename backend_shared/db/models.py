@@ -21,6 +21,7 @@ class PredictionLog(Base):
     features_json = Column(JSON, nullable=True)
     latency_ms = Column(Float, nullable=True)
     model_version = Column(String(32), nullable=True)
+    prediction_json = Column(JSON, nullable=True)
 
 class DriftMetric(Base):
     """Stores PSI/KS drift metrics per feature per track."""
