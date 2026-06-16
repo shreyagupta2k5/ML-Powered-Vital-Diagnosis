@@ -227,3 +227,6 @@ Run_Commands.txt
 
 #Test files
 populate_test_data.py
+
+node_modules/
+frontend/.env
