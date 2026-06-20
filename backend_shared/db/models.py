@@ -1,6 +1,6 @@
 # backend_shared/db/models.py
 """SQLAlchemy ORM models for the shared database layer."""
-from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Boolean, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Boolean, Text, Index
 from sqlalchemy.orm import declarative_base
 from datetime import datetime, timezone
 import json
@@ -48,3 +48,19 @@ class ModelVersion(Base):
     performance_metrics = Column(JSON, nullable=True)
     status = Column(String(16), default="active")  # active, staging, archived
     notes = Column(Text, nullable=True)
+
+class VitalSignsHistory(Base):
+    """Stores time-series vital sign snapshots for trend visualization."""
+    __tablename__ = "vital_signs_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(String(64), nullable=False, index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    hr = Column(Float, nullable=True)          # Heart Rate (bpm)
+    map_val = Column(Float, nullable=True)     # Mean Arterial Pressure (mmHg)
+    spo2 = Column(Float, nullable=True)        # Oxygen Saturation (%)
+    ecg_raw = Column(JSON, nullable=True)      # Optional raw ECG waveform points
+    
+    __table_args__ = (
+        Index("idx_vitals_patient_time", patient_id, timestamp),
+    )
