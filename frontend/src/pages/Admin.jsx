@@ -14,13 +14,7 @@ import { useNavigate }         from "react-router-dom";
 import { mlopsService }         from "../api/mlopsService";
 import ConfirmModal             from "../components/common/ConfirmModal";
 import LoadingSpinner           from "../components/common/LoadingSpinner";
-
-// Map trackId key to display name
-const TRACK_DISPLAY = {
-  track1_eicu:           "Track 1 — eICU Mortality",
-  track2_multimorbidity: "Track 2 — MIMIC Crisis",
-  track3_vitaldb:        "Track 3 — VitalDB Waveforms",
-};
+import { getClinicalLabel }     from "../utils/labels";
 
 // Unified track list — used for BOTH drift monitor and model registry
 // Always in sequence: Track 1, Track 2, Track 3
@@ -87,7 +81,7 @@ export default function AdminPage() {
   function handleHotSwap() {
     setShowModal(false);
     // 🔌 BACKEND CONNECT: POST /api/v1/registry/{regTrack}/hot-swap
-    alert(`✅ Hot-swap triggered for ${TRACK_DISPLAY[selectedTrack]}.\nIn production this will swap the live model.`);
+    alert(`✅ Hot-swap triggered for ${getClinicalLabel(selectedTrack)}.\nIn production this will swap the live model.`);
   }
 
   return (
@@ -146,7 +140,7 @@ export default function AdminPage() {
             ))}
           </div>
           <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto" }}>
-            Currently viewing: <strong style={{ color: "#555" }}>{TRACK_DISPLAY[selectedTrack]}</strong>
+            Currently viewing: <strong style={{ color: "#555" }}>{getClinicalLabel(selectedTrack)}</strong>
           </span>
         </div>
 
@@ -195,7 +189,7 @@ export default function AdminPage() {
                         }} />
                         <div>
                           <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>
-                            {TRACK_DISPLAY[key]}
+                            {getClinicalLabel(key)}
                           </div>
                           <div style={{
                             fontSize: 11, marginTop: 2,
@@ -289,7 +283,7 @@ export default function AdminPage() {
                 background: "#F8FAFC", border: "1px solid #E8ECF0",
                 color: "#111", fontWeight: 600,
               }}>
-                {TRACK_DISPLAY[selectedTrack]}
+                {getClinicalLabel(selectedTrack)}
               </span>
               {regData && (
                 <span style={{ fontSize: 12, color: "#aaa" }}>
@@ -350,7 +344,7 @@ export default function AdminPage() {
       {showModal && (
         <ConfirmModal
           title="Confirm Hot-Swap?"
-          message={`This will replace the active ${TRACK_DISPLAY[selectedTrack]} model with the staged version. The old model will be archived.`}
+          message={`This will replace the active ${getClinicalLabel(selectedTrack)} model with the staged version. The old model will be archived.`}
           onConfirm={handleHotSwap}
           onCancel={() => setShowModal(false)}
         />
@@ -389,4 +383,3 @@ const navBtn = {
   border: "1px solid #E8ECF0", borderRadius: 7,
   background: "#fff", color: "#777", cursor: "pointer",
 };
-
