@@ -26,18 +26,21 @@ class PatientHistoryItem(BaseModel):
 @router.get("/history", response_model=List[PatientHistoryItem])
 async def get_patient_history(limit: int = 50):
     """
-    Retrieve the most recent prediction for each unique patient.
-    Useful for populating the main dashboard table without re-running inference.
+    Retrieve the most recent prediction for each unique CLINICAL patient.
+    Excludes HIST-* baseline records used for drift monitoring.
     """
     try:
         with get_db_session() as db:
-            # Subquery to find the latest log ID for each patient
+            # Subquery to find the latest log ID for each clinical patient
             subquery = (
                 db.query(
                     PredictionLog.patient_id,
                     func.max(PredictionLog.id).label("max_id")
                 )
-                .filter(PredictionLog.patient_id.isnot(None))
+                .filter(
+                    PredictionLog.patient_id.isnot(None),
+                    ~PredictionLog.patient_id.like("HIST-%")  # EXCLUDE BASELINE RECORDS
+                )
                 .group_by(PredictionLog.patient_id)
                 .subquery()
             )
@@ -53,7 +56,6 @@ async def get_patient_history(limit: int = 50):
             
             history = []
             for log in results:
-                # Explicitly access attributes INSIDE the session to ensure they are loaded
                 history.append(PatientHistoryItem(
                     patient_id=str(log.patient_id),
                     last_risk_tier=str(log.risk_tier),
@@ -61,7 +63,7 @@ async def get_patient_history(limit: int = 50):
                     last_timestamp=log.timestamp,
                     track_id=str(log.track_id),
                     prediction_json=log.prediction_json,
-                    features_json=log.features_json 
+                    features_json=log.features_json,
                 ))
                 
             return history
