@@ -1,7 +1,7 @@
 # ensemble_layer/services/aggregator.py
 """
 Core ensemble fusion logic: weighted aggregation of track predictions.
-Updated for 4-tier system and dominant-track feature selection.
+Updated for 4-tier system, dominant-track feature selection, and multi-track SHAP merging.
 """
 import json
 import pathlib
@@ -33,13 +33,10 @@ class EnsembleAggregator:
     def _get_track_probability(self, track_name: str, track_output: Dict) -> float:
         """Extract probability score from track output."""
         if track_name == "track1_eicu":
-            # eICU router returns mortality_probability
             return track_output.get("mortality_probability", 0.0)
         elif track_name == "track2_multimorbidity":
-            # MIMIC router returns crisis_probability
             return track_output.get("crisis_probability", 0.0)
         elif track_name == "track3_vitaldb":
-            # VitalDB router returns flat keys for 3 events
             return max(
                 track_output.get("hypotension_probability", 0.0),
                 track_output.get("tachycardia_probability", 0.0),
@@ -60,6 +57,41 @@ class EnsembleAggregator:
             if track_output.get("tachycardia_probability", 0) > 0.7: return "Tachycardia"
             return "Waveform Instability"
         return "Unknown Risk"
+
+    def _merge_shap_drivers(self, tracks: Dict) -> List[Dict]:
+        """Merge SHAP drivers from all active tracks into a unified list."""
+        merged = []
+        
+        # Track 1 has full SHAP objects with values
+        if "track1_eicu" in tracks and tracks["track1_eicu"]:
+            t1 = tracks["track1_eicu"]
+            if "top_shap_drivers" in t1:
+                for driver in t1["top_shap_drivers"]:
+                    if isinstance(driver, dict):
+                        merged.append({
+                            "feature": driver.get("feature", "unknown"),
+                            "shap_value": abs(driver.get("shap_value", 0)),
+                            "direction": driver.get("direction", "increases_risk")
+                        })
+        
+        # Track 2 has string list - convert to objects with descending weights
+        if "track2_multimorbidity" in tracks and tracks["track2_multimorbidity"]:
+            t2 = tracks["track2_multimorbidity"]
+            if "shap_top_drivers" in t2 and isinstance(t2["shap_top_drivers"], list):
+                weight = 0.95  # Start slightly below 1.0 to rank below Track 1's real values
+                for feat in t2["shap_top_drivers"]:
+                    merged.append({
+                        "feature": feat,
+                        "shap_value": round(weight, 4),
+                        "direction": "increases_risk"
+                    })
+                    weight -= 0.1
+        
+        # Track 3 currently doesn't return SHAP drivers - skip
+        
+        # Sort by shap_value descending and return top 5
+        merged.sort(key=lambda x: x.get("shap_value", 0), reverse=True)
+        return merged[:5]
 
     def aggregate(
         self,
@@ -97,26 +129,12 @@ class EnsembleAggregator:
         if tier_order.get(resolved_tier, 0) > tier_order.get(risk_tier, 0):
             risk_tier = resolved_tier
         
-        # Step 5: Select Top 3 Features from Highest-Scoring Track
-        dominant_track = max(track_scores, key=track_scores.get)
-        dominant_output = tracks[dominant_track]
-        
-        raw_features = []
-        if dominant_track == "track1_eicu":
-            # eICU returns list of dicts: [{"feature": "name", "shap_value": 0.1}, ...]
-            raw_features = dominant_output.get("top_shap_drivers", [])
-            raw_features = [f.get("feature", f) if isinstance(f, dict) else f for f in raw_features]
-        elif dominant_track == "track2_multimorbidity":
-            # MIMIC returns list of strings: ["glucose_mean", "sbp_mean"]
-            raw_features = dominant_output.get("shap_top_drivers", [])
-        elif dominant_track == "track3_vitaldb":
-            # VitalDB currently doesn't return SHAP drivers
-            raw_features = []
-        
-        harmonized_features = self.harmonizer.harmonize_feature_list(raw_features)
-        top_features = harmonized_features[:3]
+        # Step 5: Merge Top Features from ALL Active Tracks (NEW)
+        top_features = self._merge_shap_drivers(tracks)
         
         # Step 6: Generate Alert
+        dominant_track = max(track_scores, key=track_scores.get)
+        dominant_output = tracks[dominant_track]
         dominant_type = self._get_track_risk_type(dominant_track, dominant_output)
         alert = self.risk_scorer.generate_alert(RiskTier(risk_tier), dominant_type, top_features)
         

@@ -9,6 +9,7 @@ from backend_main.auth_router import router as auth_router
 from backend_main.websockets.alert_stream import router as ws_router
 from backend_main.websockets.alert_stream import alert_worker # RESTORED IMPORT
 from backend_main.api.history_router import router as history_router
+from backend_main.api.vitals_router import router as vitals_router
 
 import warnings
 from sklearn.exceptions import (
@@ -100,6 +101,7 @@ app.include_router(drift_router)
 app.include_router(auth_router)
 app.include_router(ws_router)
 app.include_router(history_router)
+app.include_router(vitals_router)
 
 # =============================================================================
 # STARTUP EVENTS

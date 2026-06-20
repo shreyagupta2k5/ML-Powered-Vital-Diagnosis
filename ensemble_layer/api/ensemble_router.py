@@ -209,7 +209,28 @@ async def predict_ensemble(
         )
     except Exception as e:
         print(f"Failed to log ensemble prediction to DB: {e}")
-
+    # =========================================================================
+    # INGEST VITAL SIGNS FOR TIME-SERIES HISTORY
+    # =========================================================================
+    try:
+        from backend_shared.db.database import get_db_session
+        from backend_shared.db.models import VitalSignsHistory
+        
+        # Extract vitals from Track 3 features if available
+        track3_feats = request.track3_features or {}
+        if track3_feats and request.patient_id:
+            vitals_entry = VitalSignsHistory(
+                patient_id=request.patient_id,
+                timestamp=datetime.now(timezone.utc),
+                hr=track3_feats.get("mean_hr"),
+                map_val=track3_feats.get("mean_map"),
+                spo2=track3_feats.get("mean_spo2"),
+            )
+            with get_db_session() as db:
+                db.add(vitals_entry)
+                db.commit()
+    except Exception as e:
+        print(f"Failed to ingest vital signs: {e}")
     # =========================================================================
     # STANDARDIZE SHAP RESPONSE FOR FRONTEND COMPATIBILITY
     # =========================================================================
