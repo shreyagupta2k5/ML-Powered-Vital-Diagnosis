@@ -12,6 +12,7 @@ import pandas as pd
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Tuple
 from scipy import stats
+from sqlalchemy import or_
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -96,7 +97,6 @@ def _get_reference_data(track_id: str) -> Optional[pd.DataFrame]:
     logger.warning(f"[{track_id}] No reference data found — skipping drift check.")
     return None
 
-
 def _get_recent_predictions(track_id: str, window_minutes: int = 60) -> Optional[pd.DataFrame]:
     """
     Pull recent prediction feature vectors from the DB (last `window_minutes`).
@@ -105,23 +105,35 @@ def _get_recent_predictions(track_id: str, window_minutes: int = 60) -> Optional
     try:
         from backend_shared.db.database import get_db_session
         from backend_shared.db.models import PredictionLog
-        from sqlalchemy import select
+        from sqlalchemy import or_
 
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
+        
+        # FIX: Extract features INSIDE the session context manager
+        records = []
         with get_db_session() as db:
             rows = db.query(PredictionLog).filter(
-                PredictionLog.track_id == track_id,
+                or_(
+                    PredictionLog.track_id == track_id,
+                    PredictionLog.track_id == "ensemble_unified"
+                ),
                 PredictionLog.timestamp >= cutoff,
                 PredictionLog.features_json.isnot(None)
             ).all()
 
-        if not rows:
+            for r in rows:
+                if isinstance(r.features_json, dict):
+                    # Extract only the relevant track's features from ensemble payload
+                    track_data = r.features_json.get(track_id)
+                    if track_data and isinstance(track_data, dict):
+                        records.append(track_data)
+                    elif r.track_id == track_id:
+                        records.append(r.features_json)
+
+        if not records:
             logger.debug(f"[{track_id}] No DB rows found, falling back to CSV.")
             return _get_recent_predictions_from_csv(track_id, window_minutes)
 
-        records = [r.features_json for r in rows if isinstance(r.features_json, dict)]
-        if not records:
-            return _get_recent_predictions_from_csv(track_id, window_minutes)
         return pd.DataFrame(records)
 
     except Exception as e:
@@ -158,33 +170,41 @@ def _get_recent_predictions_from_csv(track_id: str, window_minutes: int) -> Opti
 
 TRACK_FEATURE_CONFIG = {
     "track1_eicu": {
-        "features": ["observation_window_hours", "mortality_probability", "latency_ms"],
+        "features": [
+            "age", "heartrate_mean", "sao2_mean", "systemicmean_mean",
+            "lactate_mean", "creatinine_mean", "glucose_mean", "temperature_mean"
+        ],
     },
     "track2_multimorbidity": {
-        "features": ["glucose_mean", "glucose_min", "glucose_max", "glucose_std", "glucose_cv", "glucose_count"],
+        "features": ["glucose_mean", "glucose_count", "sbp_mean", "sbp_count", "map_mean", "map_count"],
     },
     "track3_vitaldb": {
         "features": ["ECG", "HR", "MAP", "SPO2"],
     },
 }
 
-
 def _resolve_features(track_id: str, reference_df: pd.DataFrame) -> List[str]:
     """Return the list of features to monitor for a given track."""
     cfg = TRACK_FEATURE_CONFIG.get(track_id, {})
 
-    # Explicit feature list (Track 2)
+    # FIX: Explicit feature list takes priority if defined AND exists in reference data
     if "features" in cfg:
-        return [f for f in cfg["features"] if f in reference_df.columns]
+        valid_features = [f for f in cfg["features"] if f in reference_df.columns]
+        if valid_features:
+            return valid_features
+        logger.warning(f"[{track_id}] Configured features not found in reference data. Falling back.")
 
-    # SHAP-ranked top-N (Tracks 1 & 3)
+    # SHAP-ranked top-N (Tracks 1 & 3 fallback)
     shap_file = pathlib.Path(__file__).resolve().parent.parent.parent / cfg.get("shap_file", "")
     if shap_file.exists():
-        with open(shap_file) as f:
-            shap_importance: Dict[str, float] = json.load(f)
-        top_n = cfg.get("top_n", 10)
-        ranked = sorted(shap_importance, key=shap_importance.get, reverse=True)[:top_n]
-        return [f for f in ranked if f in reference_df.columns]
+        try:
+            with open(shap_file) as f:
+                shap_importance: Dict[str, float] = json.load(f)
+            top_n = cfg.get("top_n", 10)
+            ranked = sorted(shap_importance, key=shap_importance.get, reverse=True)[:top_n]
+            return [f for f in ranked if f in reference_df.columns]
+        except Exception as e:
+            logger.warning(f"[{track_id}] Failed to load SHAP file: {e}")
 
     # Fallback: all numeric columns in reference
     return reference_df.select_dtypes(include=[np.number]).columns.tolist()
