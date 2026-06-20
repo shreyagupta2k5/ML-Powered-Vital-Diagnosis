@@ -2,11 +2,15 @@
 // Custom Hook — useAlertWebSocket  (Phase 3 — Task 3.2)
 // File: src/hooks/useAlertWebSocket.js
 // 🔌 BACKEND CONNECT: WebSocket now active
+// ✅ Alert Deduplication: skips repeat alerts for the same
+//    patient within a 5-second debounce window
 // ============================================================
 
 import { useEffect, useRef } from "react";
 import { useDispatch }       from "react-redux";
 import { addAlert }          from "../store/alertsSlice";
+
+const DEDUPE_WINDOW_MS = 5000; // 5-second debounce window
 
 export default function useAlertWebSocket() {
   const dispatch       = useDispatch();
@@ -14,10 +18,14 @@ export default function useAlertWebSocket() {
   const retryCountRef  = useRef(0);
   const retryTimerRef  = useRef(null);
 
+  // Tracks the last time we accepted an alert for each patient_id
+  // e.g. { "PT-007": 1718999999999, "TEST_ALERT_001": 1718999991234 }
+  const lastAlertTimeRef = useRef({});
+
   function connect() {
     const wsUrl = `${import.meta.env.VITE_WS_BASE_URL}/ws/alerts/broadcast`;
     console.log("🔌 Connecting to WebSocket:", wsUrl);
-    
+
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
@@ -29,6 +37,21 @@ export default function useAlertWebSocket() {
       try {
         const msg = JSON.parse(event.data);
         console.log("📡 WebSocket message received:", msg);
+
+        // ── DEDUPLICATION CHECK ──
+        // Use patient_id as the key. System-wide alerts (no patient_id)
+        // are grouped under "GLOBAL" so they get their own debounce.
+        const dedupeKey = msg.patient_id || "GLOBAL";
+        const now = Date.now();
+        const lastTime = lastAlertTimeRef.current[dedupeKey];
+
+        if (lastTime && now - lastTime < DEDUPE_WINDOW_MS) {
+          console.log(`🔁 Duplicate alert suppressed for ${dedupeKey} (within ${DEDUPE_WINDOW_MS / 1000}s window)`);
+          return; // skip — too soon since last alert for this patient
+        }
+
+        lastAlertTimeRef.current[dedupeKey] = now;
+
         dispatch(addAlert({
           id:         Date.now(),
           type:       msg.type,
@@ -57,9 +80,6 @@ export default function useAlertWebSocket() {
 
   useEffect(() => {
     connect();
-
-    // Mock alerts removed — using real WebSocket now
-    // const mockTimer = setInterval(() => { ... }, 30000);
 
     return () => {
       clearTimeout(retryTimerRef.current);

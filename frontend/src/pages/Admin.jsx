@@ -22,23 +22,23 @@ const TRACK_DISPLAY = {
   track3_vitaldb:        "Track 3 — VitalDB Waveforms",
 };
 
-// Drift tabs
-const DRIFT_TRACKS = [
-  { key: "track2_multimorbidity", label: "Track 2" },
+// Unified track list — used for BOTH drift monitor and model registry
+// Always in sequence: Track 1, Track 2, Track 3
+const TRACKS = [
   { key: "track1_eicu",           label: "Track 1" },
+  { key: "track2_multimorbidity", label: "Track 2" },
   { key: "track3_vitaldb",        label: "Track 3" },
 ];
 
 export default function AdminPage() {
   const navigate = useNavigate();
 
-  const [health,      setHealth]      = useState(null);
-  const [driftData,   setDriftData]   = useState(null);
-  const [activeTrack, setActiveTrack] = useState("track2_multimorbidity");
-  const [regTrack,    setRegTrack]    = useState("track2_multimorbidity");
-  const [regData,     setRegData]     = useState(null);
-  const [showModal,   setShowModal]   = useState(false);
-  const [loading,     setLoading]     = useState(true);
+  const [health,        setHealth]        = useState(null);
+  const [driftData,     setDriftData]     = useState(null);
+  const [regData,       setRegData]       = useState(null);
+  const [selectedTrack, setSelectedTrack] = useState("track1_eicu"); // ONE selector drives both sections
+  const [showModal,     setShowModal]     = useState(false);
+  const [loading,       setLoading]       = useState(true);
 
   // Load health on mount, poll every 30s
   useEffect(() => {
@@ -57,37 +57,37 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load drift when tab changes
+  // Load drift when the unified track selector changes
   useEffect(() => {
     async function loadDrift() {
       try {
-        const d = await mlopsService.getDriftStatus(activeTrack);
+        const d = await mlopsService.getDriftStatus(selectedTrack);
         // Real backend returns data directly, mock returns nested under track ID
-        setDriftData(d.metrics ? d : d[activeTrack] || null);
+        setDriftData(d.metrics ? d : d[selectedTrack] || null);
       } catch (e) {
         console.warn("Drift load failed", e);
       }
     }
     loadDrift();
-  }, [activeTrack]);
+  }, [selectedTrack]);
 
-  // Load model registry when dropdown changes
+  // Load model registry when the SAME unified track selector changes
   useEffect(() => {
     async function loadModel() {
       try {
-        const m = await mlopsService.getActiveModel(regTrack);
+        const m = await mlopsService.getActiveModel(selectedTrack);
         setRegData(m);
       } catch (e) {
         console.warn("Registry load failed", e);
       }
     }
     loadModel();
-  }, [regTrack]);
+  }, [selectedTrack]);
 
   function handleHotSwap() {
     setShowModal(false);
     // 🔌 BACKEND CONNECT: POST /api/v1/registry/{regTrack}/hot-swap
-    alert(`✅ Hot-swap triggered for ${TRACK_DISPLAY[regTrack]}.\nIn production this will swap the live model.`);
+    alert(`✅ Hot-swap triggered for ${TRACK_DISPLAY[selectedTrack]}.\nIn production this will swap the live model.`);
   }
 
   return (
@@ -113,9 +113,42 @@ export default function AdminPage() {
         <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111", margin: "0 0 4px" }}>
           MLOps & Admin Panel
         </h1>
-        <p style={{ fontSize: 12, color: "#999", marginBottom: "1.5rem" }}>
+        <p style={{ fontSize: 12, color: "#999", marginBottom: "1.25rem" }}>
           Monitor model health, data drift, and manage model versions
         </p>
+
+        {/* ── UNIFIED TRACK SELECTOR — drives BOTH Drift Monitor and Model Registry below ── */}
+        <div style={{
+          background: "#fff", border: "1px solid #E8ECF0",
+          borderRadius: 12, padding: "1rem 1.25rem",
+          marginBottom: "1.25rem",
+          display: "flex", alignItems: "center", gap: 14,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#555" }}>
+            🎯 Track Selector
+          </span>
+          <div style={{ display: "flex", gap: 6 }}>
+            {TRACKS.map(t => (
+              <button key={t.key}
+                onClick={() => setSelectedTrack(t.key)}
+                style={{
+                  padding: "6px 16px", fontSize: 12,
+                  border: "1px solid",
+                  borderColor: selectedTrack === t.key ? "#BFDBFE" : "#E8ECF0",
+                  borderRadius: 7, cursor: "pointer",
+                  background: selectedTrack === t.key ? "#EFF6FF" : "#fff",
+                  color: selectedTrack === t.key ? "#1D4ED8" : "#777",
+                  fontWeight: selectedTrack === t.key ? 700 : 400,
+                  transition: "all 0.15s",
+                }}
+              >{t.label}</button>
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto" }}>
+            Currently viewing: <strong style={{ color: "#555" }}>{TRACK_DISPLAY[selectedTrack]}</strong>
+          </span>
+        </div>
 
         {loading ? (
           <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
@@ -182,22 +215,6 @@ export default function AdminPage() {
           {/* ── SECTION 2: DRIFT MONITOR ── */}
           <Section title="📊 Drift Monitor"
             subtitle="PSI > 0.25 means the model is seeing data different from training">
-            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-              {DRIFT_TRACKS.map(t => (
-                <button key={t.key}
-                  onClick={() => setActiveTrack(t.key)}
-                  style={{
-                    padding: "5px 14px", fontSize: 12,
-                    border: "1px solid",
-                    borderColor: activeTrack === t.key ? "#BFDBFE" : "#E8ECF0",
-                    borderRadius: 7, cursor: "pointer",
-                    background: activeTrack === t.key ? "#EFF6FF" : "#fff",
-                    color: activeTrack === t.key ? "#1D4ED8" : "#777",
-                    fontWeight: activeTrack === t.key ? 700 : 400,
-                  }}
-                >{t.label}</button>
-              ))}
-            </div>
 
             {driftData && (
               <>
@@ -267,15 +284,13 @@ export default function AdminPage() {
           {/* ── SECTION 3: MODEL REGISTRY ── */}
           <Section title="🗄️ Model Registry" subtitle="View active model versions and trigger hot-swap">
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-              <select
-                value={regTrack}
-                onChange={e => setRegTrack(e.target.value)}
-                style={{ padding: "7px 10px", borderRadius: 8, fontSize: 13, border: "1px solid #D1D5DB" }}
-              >
-                {Object.entries(TRACK_DISPLAY).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+              <span style={{
+                padding: "7px 14px", borderRadius: 8, fontSize: 13,
+                background: "#F8FAFC", border: "1px solid #E8ECF0",
+                color: "#111", fontWeight: 600,
+              }}>
+                {TRACK_DISPLAY[selectedTrack]}
+              </span>
               {regData && (
                 <span style={{ fontSize: 12, color: "#aaa" }}>
                   {(regData.status || regData.deployment_status || "ACTIVE").toUpperCase()}
@@ -335,7 +350,7 @@ export default function AdminPage() {
       {showModal && (
         <ConfirmModal
           title="Confirm Hot-Swap?"
-          message={`This will replace the active ${TRACK_DISPLAY[regTrack]} model with the staged version. The old model will be archived.`}
+          message={`This will replace the active ${TRACK_DISPLAY[selectedTrack]} model with the staged version. The old model will be archived.`}
           onConfirm={handleHotSwap}
           onCancel={() => setShowModal(false)}
         />
@@ -374,3 +389,4 @@ const navBtn = {
   border: "1px solid #E8ECF0", borderRadius: 7,
   background: "#fff", color: "#777", cursor: "pointer",
 };
+

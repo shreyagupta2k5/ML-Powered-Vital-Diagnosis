@@ -15,6 +15,7 @@ import { useParams, useNavigate }   from "react-router-dom";
 import { predictionService }         from "../api/predictionService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import RiskBadge      from "../components/common/RiskBadge";
+import { getClinicalLabel } from "../utils/labels";
 
 // Color for SHAP bars by importance rank
 function shapColor(i) {
@@ -37,7 +38,6 @@ export default function PatientDetailPage() {
 
   const [data,      setData]      = useState(null);
   const [loading,   setLoading]   = useState(true);
-  const [timeRange, setTimeRange] = useState("6h");
 
   useEffect(() => {
     setLoading(true);
@@ -50,32 +50,44 @@ export default function PatientDetailPage() {
         return;
       }
 
-      // Map history fields to the shape Patient page expects
+      const pj = patient.prediction_json; // real per-track data, may be null for old patients
+
+      // Helper: pull a real track score, falling back to last_probability if missing
+      function trackScore(trackKey) {
+        if (pj?.track_scores && typeof pj.track_scores[trackKey] === "number") {
+          return pj.track_scores[trackKey];
+        }
+        return patient.last_probability; // fallback for patients without prediction_json
+      }
+
+      const t1Score = trackScore("track1_eicu");
+      const t2Score = trackScore("track2_multimorbidity");
+      const t3Score = trackScore("track3_vitaldb");
+
       setData({
         patient_id: patient.patient_id,
-        overall_risk: patient.last_risk_tier,
-        risk_score: patient.last_probability,
-        unified_alert: `${patient.last_risk_tier} — ${patient.track_id}`,
+        overall_risk: pj?.risk_tier || patient.last_risk_tier,
+        risk_score: pj?.risk_score ?? patient.last_probability,
+        unified_alert: pj?.alert || `${patient.last_risk_tier} — ${patient.track_id}`,
         timestamp: patient.last_timestamp,
-        top_features: [],
+        dominant_track: pj?.dominant_track || null,
+        top_features: pj?.top_features || [], // currently always empty from backend
+        has_prediction_json: !!pj,
         track_results: {
           track1_eicu: {
-            mortality_probability: patient.last_probability,
+            mortality_probability: t1Score,
             risk_tier: patient.last_risk_tier,
-            model_version: "v1.0.0",
           },
           track2_multimorbidity: {
-            crisis_probability: patient.last_probability,
+            crisis_probability: t2Score,
             severity_level: patient.last_risk_tier,
             confidence_interval: [0, 0],
-            model_version: "v4.0.0",
           },
           track3_vitaldb: {
-            hypotension_probability: 0,
+            hypotension_probability: t3Score,
             tachycardia_probability: 0,
-            spo2_drop_probability: 0,
+            spo2_drop_probability: t3Score,
             risk_level: patient.last_risk_tier,
-            model_version: "v1.0.0",
           },
         },
       });
@@ -198,9 +210,9 @@ if (!data) return (
           gap: 12, marginBottom: "1.25rem",
         }}>
 
-          {/* Track 1 — eICU Mortality */}
+          {/* Track 1 — Mortality Risk */}
           <div style={{ ...cardStyle, borderTop: "3px solid #E24B4A" }}>
-            <div style={cardLabel}>Track 1 — eICU Mortality</div>
+            <div style={cardLabel}>{getClinicalLabel("track1_eicu")}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#E24B4A", margin: "6px 0" }}>
               {Math.round(t1.mortality_probability * 100)}%
             </div>
@@ -208,12 +220,11 @@ if (!data) return (
             <div style={{ marginTop: 10 }}>
               <MiniBar label="Mortality probability" value={t1.mortality_probability} color="#E24B4A" />
             </div>
-            <div style={versionTag}>Model {t1.model_version}</div>
           </div>
 
-          {/* Track 2 — Multimorbidity */}
+          {/* Track 2 — Crisis Risk */}
           <div style={{ ...cardStyle, borderTop: "3px solid #F59E0B" }}>
-            <div style={cardLabel}>Track 2 — Multimorbidity</div>
+            <div style={cardLabel}>{getClinicalLabel("track2_multimorbidity")}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#F59E0B", margin: "6px 0" }}>
               {Math.round(t2.crisis_probability * 100)}%
             </div>
@@ -224,19 +235,17 @@ if (!data) return (
                 CI: [{t2.confidence_interval[0].toFixed(2)}, {t2.confidence_interval[1].toFixed(2)}] (90%)
               </div>
             </div>
-            <div style={versionTag}>Model {t2.model_version}</div>
           </div>
 
-          {/* Track 3 — VitalDB */}
+          {/* Track 3 — Vital Signs */}
           <div style={{ ...cardStyle, borderTop: "3px solid #60A5FA" }}>
-            <div style={cardLabel}>Track 3 — VitalDB Waveforms</div>
+            <div style={cardLabel}>{getClinicalLabel("track3_vitaldb")}</div>
             <RiskBadge level={t3.risk_level} />
             <div style={{ marginTop: 10 }}>
               <MiniBar label="SpO₂ Drop"   value={t3.spo2_drop_probability}   color="#E24B4A" />
               <MiniBar label="Tachycardia" value={t3.tachycardia_probability} color="#F59E0B" />
               <MiniBar label="Hypotension" value={t3.hypotension_probability} color="#22C55E" />
             </div>
-            <div style={versionTag}>Model {t3.model_version}</div>
           </div>
         </div>
 
@@ -251,33 +260,62 @@ if (!data) return (
             <div style={{ fontSize: 11, color: "#aaa", marginBottom: 14 }}>
               What caused this risk score — higher bar = more impact
             </div>
-            {data.top_features.map((f, i) => (
-              <div key={f.feature} style={{
-                display: "flex", alignItems: "center", gap: 8, marginBottom: 9,
+            {data.top_features.length === 0 && (
+              <div style={{
+                textAlign: "center", padding: "2rem 1rem",
+                color: "#aaa", fontSize: 13,
               }}>
-                <span style={{
-                  width: 120, fontSize: 12, color: "#777",
-                  textAlign: "right", flexShrink: 0, fontFamily: "monospace",
-                }}>
-                  {f.feature}
-                </span>
-                <div style={{
-                  flex: 1, height: 14,
-                  background: "#F0F2F5", borderRadius: 4, overflow: "hidden",
-                }}>
-                  <div style={{
-                    width: `${(f.shap_value / maxShap) * 100}%`,
-                    height: "100%",
-                    background: shapColor(i),
-                    borderRadius: 4,
-                    transition: "width 0.5s ease",
-                  }} />
-                </div>
-                <span style={{ fontSize: 11, color: "#aaa", width: 32, textAlign: "right" }}>
-                  {f.shap_value.toFixed(2)}
-                </span>
+                📊 Feature importance data not available for this prediction.
               </div>
-            ))}
+            )}
+            {data.top_features.length > 0 && (() => {
+              // Backend currently sends top_features as plain strings:
+              //   ["glucose_mean", "sbp_mean", "map_mean"]
+              // (ranked by importance, but no numeric magnitude yet).
+              // Normalize to objects so the chart works either way —
+              // if real shap_value numbers are added later, this still works.
+              const normalized = data.top_features.map((f, i) =>
+                typeof f === "string"
+                  ? { feature: f, shap_value: null, rank: i }
+                  : { feature: f.feature, shap_value: f.shap_value, rank: i }
+              );
+              const hasRealValues = normalized.every(f => typeof f.shap_value === "number");
+              const maxVal = hasRealValues
+                ? Math.max(...normalized.map(f => f.shap_value))
+                : null;
+
+              return normalized.map((f, i) => (
+                <div key={f.feature} style={{
+                  display: "flex", alignItems: "center", gap: 8, marginBottom: 9,
+                }}>
+                  <span style={{
+                    width: 120, fontSize: 12, color: "#777",
+                    textAlign: "right", flexShrink: 0, fontFamily: "monospace",
+                  }}>
+                    {f.feature}
+                  </span>
+                  <div style={{
+                    flex: 1, height: 14,
+                    background: "#F0F2F5", borderRadius: 4, overflow: "hidden",
+                  }}>
+                    <div style={{
+                      // No real magnitude from backend yet — show descending
+                      // bars by rank so #1 is fullest, #2 slightly less, etc.
+                      width: hasRealValues
+                        ? `${(f.shap_value / maxVal) * 100}%`
+                        : `${100 - i * 20}%`,
+                      height: "100%",
+                      background: shapColor(i),
+                      borderRadius: 4,
+                      transition: "width 0.5s ease",
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: "#aaa", width: 32, textAlign: "right" }}>
+                    {hasRealValues ? f.shap_value.toFixed(2) : `#${i + 1}`}
+                  </span>
+                </div>
+              ));
+            })()}
           </div>
 
           {/* Vital Signs */}
@@ -286,37 +324,32 @@ if (!data) return (
               Vital Signs
             </div>
             <div style={{ fontSize: 11, color: "#aaa", marginBottom: 14 }}>
-              Last {timeRange} · red dashes = alert threshold
+              Time-series trend data
             </div>
 
-            <VitalLine label="Heart Rate (HR)" value="95 bpm" color="#22C55E"
-              points="0,24 35,22 70,27 105,19 140,17 175,21 210,15 240,18"
-              threshold={33} />
-            <VitalLine label="MAP (Mean Arterial Pressure)" value="65 mmHg" color="#F59E0B"
-              points="0,15 35,17 70,21 105,24 140,26 175,29 210,31 240,33"
-              threshold={31} />
-            <VitalLine label="SpO₂ (Oxygen Saturation)" value="87% ⚠" valueColor="#B91C1C"
-              color="#E24B4A"
-              points="0,10 35,11 70,14 105,18 140,22 175,27 210,32 240,35"
-              threshold={27} />
+            {/* 🔌 BACKEND CONNECT: No time-series endpoint exists yet.
+                /api/v1/history only returns ONE latest snapshot per patient,
+                not historical HR/MAP/SpO2 readings over time.
+                When the backend adds a vitals time-series endpoint
+                (e.g. GET /api/v1/patient/{id}/vitals?range=6h),
+                replace this empty state with real VitalLine charts:
 
-            {/* Time range selector */}
-            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-              {["1h", "6h", "24h"].map(t => (
-                <button key={t}
-                  onClick={() => setTimeRange(t)}
-                  style={{
-                    padding: "4px 10px", fontSize: 11,
-                    border: "1px solid",
-                    borderColor: timeRange === t ? "#BFDBFE" : "#E8ECF0",
-                    borderRadius: 6,
-                    background: timeRange === t ? "#EFF6FF" : "#fff",
-                    color: timeRange === t ? "#1D4ED8" : "#777",
-                    cursor: "pointer",
-                    fontWeight: timeRange === t ? 700 : 400,
-                  }}
-                >{t}</button>
-              ))}
+                <VitalLine label="Heart Rate (HR)" value={...} points={...} threshold={...} />
+                <VitalLine label="MAP" value={...} points={...} threshold={...} />
+                <VitalLine label="SpO2" value={...} points={...} threshold={...} />
+            */}
+            <div style={{
+              textAlign: "center", padding: "2.5rem 1rem",
+              color: "#aaa", fontSize: 13,
+              background: "#FAFBFC", borderRadius: 8,
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>📉</div>
+              <div style={{ fontWeight: 600, color: "#888", marginBottom: 4 }}>
+                Vital sign trends not available
+              </div>
+              <div style={{ fontSize: 12, color: "#bbb", maxWidth: 280, margin: "0 auto" }}>
+                Time-series HR / MAP / SpO₂ history isn't provided by the backend yet — only the latest snapshot per patient is stored.
+              </div>
             </div>
           </div>
         </div>
@@ -344,6 +377,8 @@ function MiniBar({ label, value, color }) {
   );
 }
 
+// VitalLine kept for when backend adds a real time-series endpoint —
+// see the 🔌 BACKEND CONNECT note above for how to wire it back in.
 function VitalLine({ label, value, valueColor, color, points, threshold }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -376,8 +411,4 @@ const cardStyle = {
 const cardLabel = {
   fontSize: 11, fontWeight: 700, color: "#999",
   textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4,
-};
-
-const versionTag = {
-  marginTop: 10, fontSize: 10, color: "#bbb",
 };

@@ -5,6 +5,8 @@
 //   2. Background has soft colour (not all white/grey)
 //   3. "ICU Dashboard" label next to VitalDx is now more visible
 //   4. Doctor avatar click → goes to /account page
+//   5. Clinical labels: table now shows clean clinical alert
+//      text instead of raw track_id keys
 // ============================================================
 import { predictionService } from "../api/predictionService";
 import { useState, useEffect }       from "react";
@@ -15,6 +17,7 @@ import { logout }                    from "../store/authSlice";
 import { authService }               from "../api/authService";
 import { mockPatients }              from "../mocks/mockPatients";
 import useAlertWebSocket             from "../hooks/useAlertWebSocket";
+import { getClinicalLabel }          from "../utils/labels";
 
 import StatCard      from "../components/common/StatCard";
 import AlertBanner   from "../components/common/AlertBanner";
@@ -42,6 +45,7 @@ export default function DashboardPage() {
   const [activeTier, setActiveTier] = useState("All");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [showPredictModal, setShowPredictModal] = useState(false);
 
   // active sidebar item
   const [activePath, setActivePath] = useState("/dashboard");
@@ -53,14 +57,25 @@ export default function DashboardPage() {
       try {
         const history = await predictionService.getHistory();
         // Map real backend fields to our frontend shape
-        const mapped = history.map(p => ({
-          id: p.patient_id,
-          risk_tier: p.last_risk_tier,
-          risk_score: p.last_probability,
-          unified_alert: p.track_id || "No active alerts",
-          last_updated: p.last_timestamp,
-          bed: "ICU",
-        }));
+        const mapped = history.map(p => {
+          // Prefer the real clinical alert message from prediction_json if available,
+          // otherwise fall back to a clean clinical label for the track that flagged it
+          const pj = p.prediction_json;
+          const alertText = pj?.alert
+            || (p.track_id === "ensemble_unified"
+                ? "Ensemble Risk Assessment"
+                : getClinicalLabel(p.track_id))
+            || "No active alerts";
+
+          return {
+            id: p.patient_id,
+            risk_tier: p.last_risk_tier,
+            risk_score: p.last_probability,
+            unified_alert: alertText,
+            last_updated: p.last_timestamp,
+            bed: "ICU",
+          };
+        });
         dispatch(setPatients(mapped));
       } catch (err) {
         console.warn("Failed to load patients, using mock data", err);
@@ -297,13 +312,28 @@ export default function DashboardPage() {
             />
           )}
 
-          <div style={{ marginBottom: "1.25rem" }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111", margin: 0 }}>
-              ICU Patient Monitor
-            </h1>
-            <p style={{ fontSize: 12, color: "#999", marginTop: 3 }}>
-              {total} active patients · sorted by risk level · auto-refreshing
-            </p>
+          <div style={{ marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <div>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111", margin: 0 }}>
+                ICU Patient Monitor
+              </h1>
+              <p style={{ fontSize: 12, color: "#999", marginTop: 3 }}>
+                {total} active patients · sorted by risk level · auto-refreshing
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPredictModal(true)}
+              style={{
+                background: "#E24B4A", color: "#fff",
+                border: "none", borderRadius: 8,
+                padding: "9px 18px", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+                boxShadow: "0 2px 8px rgba(226,75,74,0.25)",
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontSize: 15 }}>+</span> New Prediction
+            </button>
           </div>
 
           {/* 4 stat cards */}
@@ -342,6 +372,11 @@ export default function DashboardPage() {
 
       {/* Alert Drawer */}
       <AlertDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {/* New Prediction Modal — live inference against real backend */}
+      {showPredictModal && (
+        <PredictionModal onClose={() => setShowPredictModal(false)} />
+      )}
     </div>
   );
 }
@@ -384,3 +419,240 @@ const logoutBtn = {
   border: "1px solid #E8ECF0", borderRadius: 7,
   background: "#fff", color: "#777", cursor: "pointer",
 };
+
+// ============================================================
+// PredictionModal — Task: "Live Prediction Input Form"
+//
+// Lets a doctor type in Track 2 (multimorbidity) features and
+// send them LIVE to POST /api/v1/ensemble/predict.
+// Shows the historical patient table on the left and the
+// live form + result side-by-side on the right, as requested.
+//
+// Track 2 was chosen for the form because it only needs
+// 6 simple numeric fields (glucose, SBP, MAP — mean + count),
+// unlike Track 1 (562 features) or Track 3 (raw waveforms).
+// ============================================================
+function PredictionModal({ onClose }) {
+  const [form, setForm] = useState({
+    patient_id:    "PT-NEW-" + Math.floor(Math.random() * 900 + 100),
+    glucose_mean:  145,
+    glucose_count: 10,
+    sbp_mean:      135,
+    sbp_count:     50,
+    map_mean:      95,
+    map_count:     50,
+  });
+  const [result,   setResult]   = useState(null);
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
+
+  function handleChange(field, value) {
+    setForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setResult(null);
+
+    try {
+      // 🔌 BACKEND CONNECT: active — real live call to the ensemble endpoint
+      const payload = {
+        patient_id: form.patient_id,
+        track2_features: {
+          glucose_mean:  Number(form.glucose_mean),
+          glucose_count: Number(form.glucose_count),
+          sbp_mean:      Number(form.sbp_mean),
+          sbp_count:     Number(form.sbp_count),
+          map_mean:      Number(form.map_mean),
+          map_count:     Number(form.map_count),
+        },
+      };
+      const data = await predictionService.predictEnsemble(payload);
+      setResult(data);
+    } catch (err) {
+      setError(
+        err?.response?.data?.detail ||
+        "Prediction failed — check backend connection and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const FIELDS = [
+    { key: "glucose_mean",  label: "Glucose Mean (mg/dL)" },
+    { key: "glucose_count", label: "Glucose Count" },
+    { key: "sbp_mean",      label: "Systolic BP Mean (mmHg)" },
+    { key: "sbp_count",     label: "SBP Count" },
+    { key: "map_mean",      label: "MAP Mean (mmHg)" },
+    { key: "map_count",     label: "MAP Count" },
+  ];
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0,
+      background: "rgba(0,0,0,0.4)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 1000, padding: "1.5rem",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 14,
+        width: "100%", maxWidth: 760,
+        maxHeight: "90vh", overflow: "auto",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+      }}>
+
+        {/* Header */}
+        <div style={{
+          padding: "1.25rem 1.5rem", borderBottom: "1px solid #F0F4F8",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#111" }}>
+              ⚡ New Live Prediction
+            </div>
+            <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+              Sends data to POST /api/v1/ensemble/predict — real backend inference
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            fontSize: 20, border: "none", background: "none",
+            color: "#aaa", cursor: "pointer", lineHeight: 1,
+          }}>×</button>
+        </div>
+
+        {/* Body — form (left) + result (right), side-by-side */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: result || error ? "1fr 1fr" : "1fr",
+          gap: 0,
+        }}>
+
+          {/* ── LEFT: input form ── */}
+          <form onSubmit={handleSubmit} style={{ padding: "1.5rem", borderRight: (result || error) ? "1px solid #F0F4F8" : "none" }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#555", display: "block", marginBottom: 5 }}>
+              Patient ID
+            </label>
+            <input
+              type="text"
+              value={form.patient_id}
+              onChange={e => handleChange("patient_id", e.target.value)}
+              style={{
+                width: "100%", padding: "8px 12px", marginBottom: 14,
+                border: "1px solid #D1D5DB", borderRadius: 8, fontSize: 13,
+                boxSizing: "border-box",
+              }}
+            />
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
+              Crisis Risk Features
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {FIELDS.map(f => (
+                <div key={f.key}>
+                  <label style={{ fontSize: 11, color: "#777", display: "block", marginBottom: 4 }}>
+                    {f.label}
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form[f.key]}
+                    onChange={e => handleChange(f.key, e.target.value)}
+                    required
+                    style={{
+                      width: "100%", padding: "7px 10px",
+                      border: "1px solid #D1D5DB", borderRadius: 7, fontSize: 13,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {error && (
+              <div style={{
+                marginTop: 14, background: "#FEF2F2", border: "1px solid #FECACA",
+                borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#B91C1C",
+              }}>
+                ⚠ {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                marginTop: 16, width: "100%",
+                background: "#E24B4A", color: "#fff",
+                border: "none", borderRadius: 8, padding: "11px",
+                fontSize: 14, fontWeight: 700, cursor: loading ? "default" : "pointer",
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? "Running inference…" : "Run Live Prediction →"}
+            </button>
+          </form>
+
+          {/* ── RIGHT: live result ── */}
+          {(result || loading) && (
+            <div style={{ padding: "1.5rem" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
+                Live Result
+              </div>
+
+              {loading && (
+                <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+                  <LoadingSpinner />
+                </div>
+              )}
+
+              {result && !loading && (
+                <>
+                  <div style={{
+                    background: result.overall_risk === "CRITICAL" ? "#FEF2F2"
+                      : result.overall_risk === "HIGH" ? "#FFFBEB" : "#F0FDF4",
+                    border: "1px solid " + (result.overall_risk === "CRITICAL" ? "#FECACA"
+                      : result.overall_risk === "HIGH" ? "#FDE68A" : "#BBF7D0"),
+                    borderRadius: 10, padding: "14px",
+                    marginBottom: 14,
+                  }}>
+                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Overall Risk</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>
+                      {result.overall_risk}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
+                      Score: <strong>{result.risk_score?.toFixed(2)}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "#555", marginBottom: 10, lineHeight: 1.5 }}>
+                    {result.unified_alert}
+                  </div>
+
+                  {result.track_results && Object.entries(result.track_results).map(([key, val]) => (
+                    <div key={key} style={{
+                      background: "#F8FAFC", borderRadius: 8,
+                      padding: "8px 12px", marginBottom: 8, fontSize: 11,
+                    }}>
+                      <div style={{ fontWeight: 700, color: "#555", marginBottom: 3 }}>{getClinicalLabel(key)}</div>
+                      <pre style={{ margin: 0, fontSize: 10, color: "#888", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+                        {JSON.stringify(val, null, 1)}
+                      </pre>
+                    </div>
+                  ))}
+
+                  <div style={{ fontSize: 10, color: "#bbb", marginTop: 10 }}>
+                    Processed in {result.processing_time_ms?.toFixed?.(0) ?? "?"}ms
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
