@@ -212,7 +212,8 @@ export default function AdminPage() {
 
             {driftData && (
               <>
-                {driftData.metrics && driftData.metrics.length === 0 && (
+                {/* No data checked at all yet for this track */}
+                {(!driftData.metrics || driftData.metrics.length === 0) && (!driftData.features_checked || driftData.features_checked === 0) && (
                   <div style={{
                     textAlign: "center", padding: "2rem",
                     color: "#aaa", fontSize: 13,
@@ -220,6 +221,19 @@ export default function AdminPage() {
                     📊 No drift metrics available for this track yet.
                   </div>
                 )}
+
+                {/* Backend checked features but didn't return per-feature breakdown — show a clean summary instead of a blank section */}
+                {driftData.features_checked > 0 && (!driftData.metrics || driftData.metrics.length === 0) && (
+                  <div style={{
+                    background: "#F0FDF4", border: "1px solid #BBF7D0",
+                    borderRadius: 8, padding: "10px 14px",
+                    fontSize: 12, color: "#15803D",
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    ✅ {driftData.features_checked} features checked — no drift detected (max PSI: {driftData.max_psi?.toFixed(2) ?? "0.00"}).
+                  </div>
+                )}
+
                 {driftData.features_drifted > 0 && (
                   <div style={{
                     background: "#FFFBEB", border: "1px solid #FDE68A",
@@ -231,7 +245,8 @@ export default function AdminPage() {
                     PSI above 0.25 threshold. Consider retraining.
                   </div>
                 )}
-                {driftData.metrics.map(f => (
+
+                {driftData.metrics && driftData.metrics.map(f => (
                   <div key={f.feature_name} style={{ marginBottom: 14 }}>
                     <div style={{
                       display: "flex", justifyContent: "space-between",

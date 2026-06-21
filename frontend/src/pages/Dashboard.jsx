@@ -7,6 +7,9 @@
 //   4. Doctor avatar click → goes to /account page
 //   5. Clinical labels: table now shows clean clinical alert
 //      text instead of raw track_id keys
+//   6. Dynamic Prediction modal: doctor can choose Mortality Risk /
+//      Crisis Risk / Vital Signs / Ensemble (all 3) before running
+//      a live prediction, with curated input fields per track
 // ============================================================
 import { predictionService } from "../api/predictionService";
 import { useState, useEffect }       from "react";
@@ -72,7 +75,7 @@ export default function DashboardPage() {
             risk_tier: p.last_risk_tier,
             risk_score: p.last_probability,
             unified_alert: alertText,
-            last_updated: p.last_timestamp,
+            last_updated: p.last_timestamp, // raw ISO timestamp — PatientTable.jsx formats this for display
             bed: "ICU",
           };
         });
@@ -421,33 +424,135 @@ const logoutBtn = {
 };
 
 // ============================================================
-// PredictionModal — Task: "Live Prediction Input Form"
+// PredictionModal — Task: "Live Prediction Input Form" (Dynamic)
 //
-// Lets a doctor type in Track 2 (multimorbidity) features and
-// send them LIVE to POST /api/v1/ensemble/predict.
-// Shows the historical patient table on the left and the
-// live form + result side-by-side on the right, as requested.
-//
-// Track 2 was chosen for the form because it only needs
-// 6 simple numeric fields (glucose, SBP, MAP — mean + count),
-// unlike Track 1 (562 features) or Track 3 (raw waveforms).
+// Lets a doctor choose which track(s) to run a live prediction
+// against — Mortality Risk (Track 1), Crisis Risk (Track 2),
+// Vital Signs (Track 3), or Ensemble (all 3 combined) — and
+// dynamically shows only the relevant input fields.
+// Sends data LIVE to POST /api/v1/ensemble/predict.
 // ============================================================
-function PredictionModal({ onClose }) {
-  const [form, setForm] = useState({
-    patient_id:    "PT-NEW-" + Math.floor(Math.random() * 900 + 100),
-    glucose_mean:  145,
-    glucose_count: 10,
-    sbp_mean:      135,
-    sbp_count:     50,
-    map_mean:      95,
-    map_count:     50,
+
+// Curated input fields per track (clinically high-impact subset,
+// not the full 562-feature set for Track 1).
+const TRACK_OPTIONS = [
+  { key: "track1_eicu",           label: "Mortality Risk" },
+  { key: "track2_multimorbidity", label: "Crisis Risk" },
+  { key: "track3_vitaldb",        label: "Vital Signs" },
+  { key: "ensemble",              label: "All Tracks (Ensemble)" },
+];
+
+const TRACK1_FIELDS = [
+  { key: "age",                label: "Age",                          default: 65,     type: "number" },
+  { key: "gender",              label: "Gender",                       default: "Male", type: "select", options: ["Male", "Female"] },
+  { key: "heartrate_mean",      label: "Heart Rate Mean (bpm)",        default: 88,     type: "number" },
+  { key: "sao2_mean",           label: "SaO2 Mean (%)",                default: 96,     type: "number" },
+  { key: "systemicmean_mean",   label: "Systemic Mean (MAP proxy)",    default: 75,     type: "number" },
+  { key: "lactate_mean",        label: "Lactate Mean (mmol/L)",        default: 2.0,    type: "number" },
+  { key: "creatinine_mean",     label: "Creatinine Mean (mg/dL)",      default: 1.2,    type: "number" },
+  { key: "glucose_mean",        label: "Glucose Mean (mg/dL)",         default: 120,    type: "number" },
+];
+
+const TRACK2_FIELDS = [
+  { key: "glucose_mean",  label: "Glucose Mean (mg/dL)",      default: 145 },
+  { key: "glucose_count", label: "Glucose Count",             default: 10 },
+  { key: "sbp_mean",      label: "Systolic BP Mean (mmHg)",   default: 135 },
+  { key: "sbp_count",     label: "SBP Count",                 default: 50 },
+  { key: "map_mean",      label: "MAP Mean (mmHg)",            default: 95 },
+  { key: "map_count",     label: "MAP Count",                  default: 50 },
+];
+
+const TRACK3_FIELDS = [
+  { key: "mean_hr",         label: "Mean HR (bpm)",        default: 85 },
+  { key: "std_hr",          label: "HR Std Dev",            default: 12 },
+  { key: "min_hr",          label: "Min HR (bpm)",          default: 65 },
+  { key: "max_hr",          label: "Max HR (bpm)",          default: 105 },
+  { key: "mean_map",        label: "Mean MAP (mmHg)",       default: 75 },
+  { key: "std_map",         label: "MAP Std Dev",           default: 8 },
+  { key: "min_map",         label: "Min MAP (mmHg)",        default: 60 },
+  { key: "max_map",         label: "Max MAP (mmHg)",        default: 90 },
+  { key: "map_range",       label: "MAP Range (mmHg)",      default: 30 },
+  { key: "mean_spo2",       label: "Mean SpO₂ (%)",         default: 97 },
+  { key: "std_spo2",        label: "SpO₂ Std Dev",          default: 2 },
+  { key: "min_spo2",        label: "Min SpO₂ (%)",          default: 92 },
+  { key: "mean_ecg",        label: "Mean ECG",               default: 1.0 },
+  { key: "std_ecg",         label: "ECG Std Dev",            default: 0.3 },
+  { key: "min_ecg",         label: "Min ECG",                default: 0.5 },
+  { key: "max_ecg",         label: "Max ECG",                default: 1.5 },
+  { key: "map_variability", label: "MAP Variability",        default: 8 },
+  { key: "hr_variability",  label: "HR Variability",         default: 12 },
+  { key: "ecg_range",       label: "ECG Range",              default: 1.0 },
+  { key: "map_drop",        label: "MAP Drop (mmHg)",        default: 5 },
+  { key: "spo2_drop",       label: "SpO₂ Drop (%)",          default: 3 },
+];
+
+// Builds the initial default form values for all 3 tracks at once,
+// so switching between track selections doesn't lose previously typed values.
+function buildDefaultFormState() {
+  const state = {};
+  [...TRACK1_FIELDS, ...TRACK2_FIELDS, ...TRACK3_FIELDS].forEach(f => {
+    if (!(f.key in state)) state[f.key] = f.default;
   });
+  return state;
+}
+
+function PredictionModal({ onClose }) {
+  const [selectedTrack, setSelectedTrack] = useState("track2_multimorbidity"); // default to Crisis Risk (smallest form)
+  const [patientId, setPatientId] = useState("PT-NEW-" + Math.floor(Math.random() * 900 + 100));
+  const [form, setForm] = useState(buildDefaultFormState());
   const [result,   setResult]   = useState(null);
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
 
   function handleChange(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  // Returns the field list to render based on current track selection
+  function getActiveFields() {
+    if (selectedTrack === "track1_eicu") return TRACK1_FIELDS;
+    if (selectedTrack === "track2_multimorbidity") return TRACK2_FIELDS;
+    if (selectedTrack === "track3_vitaldb") return TRACK3_FIELDS;
+    // ensemble — show all 3 sections
+    return null;
+  }
+
+  // Builds the payload sent to POST /api/v1/ensemble/predict.
+  // Only includes the feature blocks relevant to the selection.
+  function buildPayload() {
+    const payload = { patient_id: patientId };
+
+    function track1Block() {
+      const obj = {};
+      TRACK1_FIELDS.forEach(f => {
+        obj[f.key] = f.type === "select" ? form[f.key] : Number(form[f.key]);
+      });
+      return obj;
+    }
+    function track2Block() {
+      const obj = {};
+      TRACK2_FIELDS.forEach(f => { obj[f.key] = Number(form[f.key]); });
+      return obj;
+    }
+    function track3Block() {
+      const obj = {};
+      TRACK3_FIELDS.forEach(f => { obj[f.key] = Number(form[f.key]); });
+      return obj;
+    }
+
+    if (selectedTrack === "track1_eicu") {
+      payload.track1_features = track1Block();
+    } else if (selectedTrack === "track2_multimorbidity") {
+      payload.track2_features = track2Block();
+    } else if (selectedTrack === "track3_vitaldb") {
+      payload.track3_features = track3Block();
+    } else if (selectedTrack === "ensemble") {
+      payload.track1_features = track1Block();
+      payload.track2_features = track2Block();
+      payload.track3_features = track3Block();
+    }
+
+    return payload;
   }
 
   async function handleSubmit(e) {
@@ -458,17 +563,7 @@ function PredictionModal({ onClose }) {
 
     try {
       // 🔌 BACKEND CONNECT: active — real live call to the ensemble endpoint
-      const payload = {
-        patient_id: form.patient_id,
-        track2_features: {
-          glucose_mean:  Number(form.glucose_mean),
-          glucose_count: Number(form.glucose_count),
-          sbp_mean:      Number(form.sbp_mean),
-          sbp_count:     Number(form.sbp_count),
-          map_mean:      Number(form.map_mean),
-          map_count:     Number(form.map_count),
-        },
-      };
+      const payload = buildPayload();
       const data = await predictionService.predictEnsemble(payload);
       setResult(data);
     } catch (err) {
@@ -481,14 +576,7 @@ function PredictionModal({ onClose }) {
     }
   }
 
-  const FIELDS = [
-    { key: "glucose_mean",  label: "Glucose Mean (mg/dL)" },
-    { key: "glucose_count", label: "Glucose Count" },
-    { key: "sbp_mean",      label: "Systolic BP Mean (mmHg)" },
-    { key: "sbp_count",     label: "SBP Count" },
-    { key: "map_mean",      label: "MAP Mean (mmHg)" },
-    { key: "map_count",     label: "MAP Count" },
-  ];
+  const activeFields = getActiveFields();
 
   return (
     <div style={{
@@ -499,7 +587,7 @@ function PredictionModal({ onClose }) {
     }}>
       <div style={{
         background: "#fff", borderRadius: 14,
-        width: "100%", maxWidth: 760,
+        width: "100%", maxWidth: 820,
         maxHeight: "90vh", overflow: "auto",
         boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
       }}>
@@ -537,8 +625,8 @@ function PredictionModal({ onClose }) {
             </label>
             <input
               type="text"
-              value={form.patient_id}
-              onChange={e => handleChange("patient_id", e.target.value)}
+              value={patientId}
+              onChange={e => setPatientId(e.target.value)}
               style={{
                 width: "100%", padding: "8px 12px", marginBottom: 14,
                 border: "1px solid #D1D5DB", borderRadius: 8, fontSize: 13,
@@ -546,31 +634,45 @@ function PredictionModal({ onClose }) {
               }}
             />
 
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
-              Crisis Risk Features
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {FIELDS.map(f => (
-                <div key={f.key}>
-                  <label style={{ fontSize: 11, color: "#777", display: "block", marginBottom: 4 }}>
-                    {f.label}
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={form[f.key]}
-                    onChange={e => handleChange(f.key, e.target.value)}
-                    required
-                    style={{
-                      width: "100%", padding: "7px 10px",
-                      border: "1px solid #D1D5DB", borderRadius: 7, fontSize: 13,
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
+            {/* ── Track selector — 4 options ── */}
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
+              Run Prediction For
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+              {TRACK_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setSelectedTrack(opt.key)}
+                  style={{
+                    padding: "6px 14px", fontSize: 12,
+                    border: "1px solid",
+                    borderColor: selectedTrack === opt.key ? "#FECACA" : "#E8ECF0",
+                    borderRadius: 7, cursor: "pointer",
+                    background: selectedTrack === opt.key ? "#FEF2F2" : "#fff",
+                    color: selectedTrack === opt.key ? "#B91C1C" : "#777",
+                    fontWeight: selectedTrack === opt.key ? 700 : 400,
+                    transition: "all 0.15s",
+                  }}
+                >{opt.label}</button>
               ))}
             </div>
+
+            {/* ── Dynamic fields based on selection ── */}
+            {selectedTrack === "ensemble" ? (
+              <>
+                <FieldSection title="Mortality Risk Features" fields={TRACK1_FIELDS} form={form} onChange={handleChange} />
+                <FieldSection title="Crisis Risk Features" fields={TRACK2_FIELDS} form={form} onChange={handleChange} />
+                <FieldSection title="Vital Signs Features" fields={TRACK3_FIELDS} form={form} onChange={handleChange} />
+              </>
+            ) : (
+              <FieldSection
+                title={TRACK_OPTIONS.find(o => o.key === selectedTrack)?.label + " Features"}
+                fields={activeFields}
+                form={form}
+                onChange={handleChange}
+              />
+            )}
 
             {error && (
               <div style={{
@@ -652,6 +754,53 @@ function PredictionModal({ onClose }) {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Small helper component to render a labeled group of input fields
+function FieldSection({ title, fields, form, onChange }) {
+  if (!fields) return null;
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
+        {title}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {fields.map(f => (
+          <div key={f.key}>
+            <label style={{ fontSize: 11, color: "#777", display: "block", marginBottom: 4 }}>
+              {f.label}
+            </label>
+            {f.type === "select" ? (
+              <select
+                value={form[f.key]}
+                onChange={e => onChange(f.key, e.target.value)}
+                style={{
+                  width: "100%", padding: "7px 10px",
+                  border: "1px solid #D1D5DB", borderRadius: 7, fontSize: 13,
+                  boxSizing: "border-box", background: "#fff",
+                }}
+              >
+                {f.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            ) : (
+              <input
+                type="number"
+                step="any"
+                value={form[f.key]}
+                onChange={e => onChange(f.key, e.target.value)}
+                required
+                style={{
+                  width: "100%", padding: "7px 10px",
+                  border: "1px solid #D1D5DB", borderRadius: 7, fontSize: 13,
+                  boxSizing: "border-box",
+                }}
+              />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

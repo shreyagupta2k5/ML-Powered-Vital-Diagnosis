@@ -27,13 +27,16 @@ function riskBarColor(tier) {
   return "#22C55E";
 }
 
-// Formats ISO string to "2 min ago"
+// Formats backend UTC timestamp into relative time ("2m ago") for recent
+// updates, or a full local date+time string for anything older than a day.
+// new Date(isoString) automatically converts UTC → the browser's local timezone.
 function timeAgo(isoString) {
-  const diff = Math.floor((Date.now() - new Date(isoString)) / 1000);
-  if (diff < 60)   return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)return `${Math.floor(diff / 3600)}h ago`;
-  return new Date(isoString).toLocaleDateString();
+  const date = new Date(isoString);
+  const diff = Math.floor((Date.now() - date) / 1000);
+  if (diff < 60)    return `${diff}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return date.toLocaleString(); // local date + time, not just date
 }
 
 export default function PatientTable({ patients }) {
