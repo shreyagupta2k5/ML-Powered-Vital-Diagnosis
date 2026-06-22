@@ -9,6 +9,7 @@
 //   - Clicking a row navigates to /patient/:id
 //   - Critical/High alert rows pulse with a red border
 //   - Empty state if no patients match the filter
+//   - NEW: Displays a "NEW" badge for live predictions
 // ============================================================
 
 import { useNavigate }   from "react-router-dom";
@@ -102,7 +103,24 @@ export default function PatientTable({ patients }) {
                 onMouseLeave={e => e.currentTarget.style.background = isLive ? "#FFFAF9" : "transparent"}
               >
                 <td style={td}>
-                  <span style={{ fontWeight: 700, color: "#111" }}>{p.id}</span>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <span style={{ fontWeight: 700, color: "#111" }}>{p.id}</span>
+                    {/* NEW BADGE ADDED HERE */}
+                    {p.isNew && (
+                      <span style={{ 
+                        background: "#3B82F6", 
+                        color: "#fff", 
+                        padding: "2px 6px", 
+                        borderRadius: "4px", 
+                        fontSize: "10px", 
+                        fontWeight: "bold", 
+                        marginLeft: "8px",
+                        letterSpacing: "0.05em"
+                      }}>
+                        NEW
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td style={td}>
                   <RiskBadge level={p.risk_tier} />

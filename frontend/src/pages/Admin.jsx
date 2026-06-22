@@ -85,8 +85,11 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ background: "#F0F2F5", minHeight: "100vh",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #ffffff  0%,   #909ab0 50%, #936270 100%)",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      display: "flex",
+      flexDirection: "column",
+    }}>
 
       {/* Navbar */}
       <nav style={{
