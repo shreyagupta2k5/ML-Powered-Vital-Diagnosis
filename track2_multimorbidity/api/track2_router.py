@@ -201,21 +201,36 @@ async def predict_crisis(request: PatientVitalsRequest):
         feature_values = [float(raw_input[feat]) for feat in v4_features]
         feature_vector = pd.DataFrame([feature_values], columns=v4_features)
 
-        # Generate prediction using calibrated model
-        proba = float(model.predict_proba(feature_vector)[0][1])
-
+        # Generate raw prediction
+        raw_proba = float(model.predict_proba(feature_vector)[0][1])
+        
+        # FIX: Apply baseline correction for physiologically normal ranges
+        # Normal glucose: 70-140, Normal SBP: 90-140, Normal MAP: 70-100
+        is_normal_glucose = 70 <= request.glucose_mean <= 140
+        is_normal_sbp = 90 <= request.sbp_mean <= 140  
+        is_normal_map = 70 <= request.map_mean <= 100
+        
+        if is_normal_glucose and is_normal_sbp and is_normal_map:
+            # Cap baseline probability for truly normal vitals
+            proba = min(raw_proba, 0.15)  # Max 15% for normal physiology
+        elif raw_proba > 0.70:
+            proba = raw_proba  # Keep high-risk predictions unchanged
+        else:
+            # Scale moderate risks down slightly
+            proba = raw_proba * 0.85
+        
         # Conformal prediction interval calculations
         ci_lower = max(0.0, proba - conformal_quantile)
         ci_upper = min(1.0, proba + conformal_quantile)
 
-        # Non-leaking severity heuristics
+        # Updated severity heuristics matching corrected probabilities
         severity = "LOW"
         crisis_type = "none"
-        if proba > 0.70:
+        if proba > 0.50:  # Lowered from 0.70 due to baseline correction
             severity = "HIGH"
             crisis_type = "multimorbidity_metabolic_bp"
-        elif proba > 0.45:
-            severity = "MODERATE"
+        elif proba > 0.25:  # Lowered from 0.45
+            severity = "MODERATE" 
             crisis_type = "elevated_risk_state"
 
         # Calculate SHAP explainability attributes or use fallback central tendency variations

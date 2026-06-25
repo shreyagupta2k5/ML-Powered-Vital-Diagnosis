@@ -105,17 +105,34 @@ class EnsembleAggregator:
             "track2_multimorbidity": track2_output,
             "track3_vitaldb": track3_output
         }
-        
-        # Step 1: Calculate scores
+    
+        # Step 1: Calculate scores & identify ACTIVE tracks
         track_scores = {}
+        active_tracks = []
         for name, output in tracks.items():
-            track_scores[name] = self._get_track_probability(name, output)
+            score = self._get_track_probability(name, output)
+            track_scores[name] = score
+            # A track is "active" if it has non-zero probability OR explicit data
+            if score > 0.0 or (output and len(output) > 0):
+                active_tracks.append(name)
         
-        # Step 2: Weighted Fusion
-        risk_score = sum(
-            track_scores[name] * self.weights.get(name, 0.0)
-            for name in self.weights
-        )
+        # Step 2: CRITICAL FIX - Normalize weights for active tracks only
+        if not active_tracks:
+            risk_score = 0.0
+        else:
+            # Get raw weights for active tracks
+            raw_weights = {t: self.weights.get(t, 0.0) for t in active_tracks}
+            total_weight = sum(raw_weights.values())
+            
+            # Normalize so active weights sum to 1.0
+            normalized_weights = {t: w / total_weight for t, w in raw_weights.items()}
+            
+            # Calculate weighted score using normalized weights
+            risk_score = sum(
+                track_scores[t] * normalized_weights[t] 
+                for t in active_tracks
+            )
+        
         risk_score = min(1.0, max(0.0, risk_score))
         
         # Step 3: Assign Risk Tier
@@ -129,7 +146,7 @@ class EnsembleAggregator:
         if tier_order.get(resolved_tier, 0) > tier_order.get(risk_tier, 0):
             risk_tier = resolved_tier
         
-        # Step 5: Merge Top Features from ALL Active Tracks (NEW)
+        # Step 5: Merge Top Features from ALL Active Tracks
         top_features = self._merge_shap_drivers(tracks)
         
         # Step 6: Generate Alert

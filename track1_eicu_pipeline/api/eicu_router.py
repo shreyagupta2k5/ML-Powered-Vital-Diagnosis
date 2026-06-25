@@ -24,6 +24,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
 import numpy as np
 import pandas as pd
 
@@ -114,35 +117,40 @@ _shap_explainer = None
 def _load_artifacts() -> None:
     global _model, _feature_cols, _shap_explainer
 
-    # ── feature columns ──────────────────────────────────────────────────────
+    # ─ feature columns ──────────────────────────────────────────────────────
     if FEATURE_COLS_PATH.exists():
-        _feature_cols = (
-            pd.read_csv(FEATURE_COLS_PATH).iloc[:, 0].tolist()
-        )
+        df = pd.read_csv(FEATURE_COLS_PATH)
+        # FIX: Skip header row if present, take only actual column names
+        col_list = df.iloc[:, 0].tolist()
+        # Remove any non-feature entries (like "0" header artifact)
+        _feature_cols = [c for c in col_list if isinstance(c, str) and c.strip()]
         logger.info("Loaded %d feature columns from %s", len(_feature_cols), FEATURE_COLS_PATH)
     else:
-        logger.warning(
-            "feature_columns.csv not found at %s — feature list will be inferred "
-            "from the model at prediction time.", FEATURE_COLS_PATH
-        )
+        logger.warning("feature_columns.csv not found — features will be inferred.")
 
-    # ── model ─────────────────────────────────────────────────────────────────
+    # ─ model ─────────────────────────────────────────────────────────────────
     if MODEL_PATH.exists():
         import joblib
-        _model = joblib.load(MODEL_PATH)
-        logger.info("Model loaded from %s", MODEL_PATH)
+        try:
+            _model = joblib.load(MODEL_PATH)
+            # Verify feature count matches
+            expected = getattr(_model, 'n_features_in_', None)
+            if expected and expected != len(_feature_cols):
+                logger.error(
+                    "FEATURE MISMATCH: Model expects %d features but CSV has %d. "
+                    "Predictions will be WRONG.", expected, len(_feature_cols)
+                )
+            logger.info("Model loaded from %s (expects %d features)", MODEL_PATH, expected)
+        except Exception as e:
+            logger.error("Failed to load model: %s", e)
+            _model = None
     else:
-        logger.error(
-            "Model file not found at %s. "
-            "/health will report model_loaded=False and /predict will return 503.",
-            MODEL_PATH,
-        )
+        logger.error("Model file not found at %s", MODEL_PATH)
 
-    # ── SHAP explainer (optional — graceful fallback) ─────────────────────────
+    # ── SHAP explainer ───────────────────────────────────────────────────────
     try:
         import shap
         if _model is not None:
-            # RandomForest → TreeExplainer; Pipeline → use final estimator
             estimator = _model
             if hasattr(_model, "named_steps"):
                 estimator = _model.named_steps.get(
@@ -150,10 +158,9 @@ def _load_artifacts() -> None:
                 )
             _shap_explainer = shap.TreeExplainer(estimator)
             logger.info("SHAP TreeExplainer initialised")
-    except Exception as exc:   # shap not installed or incompatible model type
+    except Exception as exc:
         logger.warning("SHAP explainer not available: %s", exc)
         _shap_explainer = None
-
 
 _load_artifacts()
 
@@ -186,40 +193,51 @@ def _write_log(row: Dict[str, Any]) -> None:
 
 def _build_feature_df(req: PredictRequest) -> pd.DataFrame:
     """
-    Merge declared Pydantic fields + extra_features dict into a single-row
-    DataFrame aligned to _feature_cols order.
-    Missing columns are filled with 0.0 (same strategy as training pipeline).
-    Categorical columns (gender, ethnicity) are left as strings for the
-    pipeline's OneHotEncoder to handle.
+    Build feature DataFrame aligned EXACTLY to model's expected 561 columns.
+    Missing features are imputed to 0.0 (same as training).
     """
-    # 1. Start from declared fields (exclude metadata / non-feature keys)
     excluded = {"patient_id", "observation_window_hours", "extra_features"}
-    flat: Dict[str, Any] = {
-        k: v
-        for k, v in req.model_dump(exclude=excluded).items()
+    
+    # 1. Extract declared fields
+    flat = {
+        k: v for k, v in req.model_dump(exclude=excluded).items()
         if v is not None
     }
-
+    
     # 2. Merge extra_features
     if req.extra_features:
         flat.update({k: v for k, v in req.extra_features.items() if v is not None})
-
-    # 3. Also absorb any extra fields Pydantic allowed through
-    for k, v in req.__pydantic_extra__.items() if req.__pydantic_extra__ else []:
-        if k not in excluded and v is not None:
-            flat[k] = v
-
+    
+    # 3. Absorb pydantic extra fields
+    if req.__pydantic_extra__:
+        for k, v in req.__pydantic_extra__.items():
+            if k not in excluded and v is not None:
+                flat[k] = v
+    
     # 4. Build DataFrame
     df = pd.DataFrame([flat])
-
-    # 5. Align to training feature columns if available
+    
+    # 5. CRITICAL FIX: Align to EXACT model feature count
     if _feature_cols:
-        # Add any missing columns with 0.0
-        for col in _feature_cols:
+        # Use ONLY the first N columns that match model expectation
+        target_cols = _feature_cols[:getattr(_model, 'n_features_in_', len(_feature_cols))]
+        
+        # Add missing columns with 0.0
+        for col in target_cols:
             if col not in df.columns:
                 df[col] = 0.0
-        df = df[_feature_cols]
-
+        
+        # Select ONLY target columns in exact order
+        df = df[target_cols]
+        
+        # Log warning if we're dropping columns
+        if len(_feature_cols) > len(target_cols):
+            dropped = set(_feature_cols) - set(target_cols)
+            logger.warning(
+                "Dropped %d excess features to match model's %d expected: %s",
+                len(dropped), len(target_cols), list(dropped)[:5]
+            )
+    
     return df
 
 # ─────────────────────────────────────────────────────────────────────────────

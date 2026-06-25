@@ -176,24 +176,19 @@ def predict(payload: dict):
     # ======================================
 
     alerts = []
-
-    if hyp_prob > 0.7:
-
-        alerts.append(
-            "Potential Hypotension"
-        )
-
-    if tach_prob > 0.7:
-
-        alerts.append(
-            "Potential Tachycardia"
-        )
-
-    if spo2_prob > 0.7:
-
-        alerts.append(
-            "Potential Oxygen Desaturation"
-        )
+    
+    # FIX: Use clinically meaningful thresholds
+    if hyp_prob > 0.70:
+        alerts.append("Potential Hypotension")
+    
+    # Only flag tachycardia if mean HR > 100 OR max HR > 120
+    mean_hr = payload.get("features", {}).get("mean_hr", 0) if "features" in payload else 0
+    max_hr = payload.get("features", {}).get("max_hr", 0) if "features" in payload else 0
+    if tach_prob > 0.70 and (mean_hr > 100 or max_hr > 120):
+        alerts.append("Potential Tachycardia")
+    
+    if spo2_prob > 0.70:
+        alerts.append("Potential Oxygen Desaturation")
 
     # ======================================
     # DRIFT DETECTION
