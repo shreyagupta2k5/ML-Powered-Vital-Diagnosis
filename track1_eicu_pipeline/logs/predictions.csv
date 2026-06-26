@@ -148,3 +148,4 @@ timestamp_utc,request_id,patient_id,observation_window_hours,mortality_probabili
 2026-06-25T22:02:03.460096+00:00,39caa9dd-e6a5-440e-8d82-5c0bd72c2a2d,患者--001,24,0.375,HIGH,162.03,track1_random_forest_v1.0,BUN_min,-0.01778,TV_max,0.01594,BUN_max,-0.00965
 2026-06-25T22:02:16.906374+00:00,5c8b0764-7711-4106-b2a2-ff7fb03a1055,,24,0.375,HIGH,160.93,track1_random_forest_v1.0,BUN_min,-0.01778,TV_max,0.01594,BUN_max,-0.00965
 2026-06-25T22:04:04.769570+00:00,7b32005c-3e73-4e95-9434-7750c62d2566,,24,0.375,HIGH,192.67,track1_random_forest_v1.0,BUN_min,-0.01778,TV_max,0.01594,BUN_max,-0.00965
+2026-06-26T12:09:11.859399+00:00,12e5619a-fb99-4e79-9942-e82538382944,PT-NEW,24,0.35,HIGH,292.38,track1_random_forest_v1.0,BUN_min,-0.01799,TV_max,0.01655,BUN_max,-0.01054
